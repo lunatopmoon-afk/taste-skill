@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ArrowLeft, ArrowRight, Cube, ShoppingBag } from '@phosphor-icons/react'
+import { Cube, ShoppingBag } from '@phosphor-icons/react'
 import { fetchCatalog, formatMoney, isShopifyConfigured } from './lib/shopify.js'
 import { DEMO_PRODUCTS } from './lib/demoProducts.js'
 import { useCart } from './lib/useCart.js'
@@ -13,8 +13,14 @@ const GalleryWall = lazy(() =>
 
 // Ajusta estos textos a las características reales de tus cuadros.
 const SPECS = [
-  ['Auto LEGO Technic armado', 'El modelo completo, armado pieza por pieza y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.'],
-  ['Luz LED', 'Línea de luz alrededor del póster o retroiluminación que baña la pared, según el modelo.'],
+  [
+    'Auto LEGO Technic armado',
+    'El modelo completo, armado pieza por pieza y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.',
+  ],
+  [
+    'Luz LED',
+    'Línea de luz alrededor del póster o retroiluminación que baña la pared, según el modelo.',
+  ],
   ['Fondo del equipo', 'Póster con el color de la escudería y el nombre del auto al pie.'],
   ['Marco negro', 'Perfil delgado negro mate para que todo el protagonismo sea del auto.'],
 ]
@@ -46,7 +52,6 @@ export default function App() {
     [add],
   )
 
-  const step = (d) => setActive((i) => (i + d + products.length) % products.length)
   const current = products[active] ?? products[0]
 
   return (
@@ -56,8 +61,12 @@ export default function App() {
           {shopName}
         </a>
         <nav className="flex items-center gap-6 text-sm">
-          <a href="#coleccion" className="hidden text-dim transition hover:text-chalk sm:block">Colección</a>
-          <a href="#detalles" className="hidden text-dim transition hover:text-chalk sm:block">Detalles</a>
+          <a href="#coleccion" className="hidden text-dim transition hover:text-chalk sm:block">
+            Colección
+          </a>
+          <a href="#detalles" className="hidden text-dim transition hover:text-chalk sm:block">
+            Detalles
+          </a>
           <button
             onClick={() => setCartOpen(true)}
             className="relative grid size-11 place-items-center rounded-full border border-line bg-pit/70 backdrop-blur transition hover:border-chalk"
@@ -79,7 +88,6 @@ export default function App() {
           <div className="absolute inset-0">
             <GalleryWall
               products={products}
-              active={active}
               onActiveChange={setActive}
               onSelect={setSelected}
               paused={Boolean(selected)}
@@ -94,23 +102,16 @@ export default function App() {
                 Tu F1 favorito, colgado en tu pared.
               </h1>
               <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-dim">
-                Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Pasa el cursor
-                para acercarlos y haz clic para verlos en 3D, de frente y de lado.
+                Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Toca un cuadro para
+                verlo en 3D, de frente y de lado.
               </p>
             </div>
 
             {/* Torre de tiempos: selector de cuadros */}
-            <div className="pointer-events-auto flex items-center gap-3">
-              <button
-                onClick={() => step(-1)}
-                className="grid size-11 place-items-center rounded-full border border-line transition hover:border-chalk md:hidden"
-                aria-label="Cuadro anterior"
-              >
-                <ArrowLeft size={16} />
-              </button>
+            <div className="pointer-events-auto">
               <ol className="w-full min-w-[260px] divide-y divide-line rounded-2xl border border-line bg-pit/80 font-mono text-xs backdrop-blur md:w-[320px]">
                 {products.map((p, i) => (
-                  <li key={p.id} className={i === active ? '' : 'hidden md:block'}>
+                  <li key={p.id}>
                     <button
                       onMouseEnter={() => setActive(i)}
                       onFocus={() => setActive(i)}
@@ -118,20 +119,19 @@ export default function App() {
                       className="flex w-full items-center gap-3 px-4 py-3 text-left"
                     >
                       <span className={i === active ? 'text-signal' : 'text-dim'}>P{i + 1}</span>
-                      <span className="size-2.5 rounded-sm" style={{ background: p.model.backdrop.center, boxShadow: `0 0 8px ${p.model.led.halo ?? p.model.led.border}` }} />
+                      <span
+                        className="size-2.5 rounded-sm"
+                        style={{
+                          background: p.model.backdrop.center,
+                          boxShadow: `0 0 8px ${p.model.led.halo ?? p.model.led.border}`,
+                        }}
+                      />
                       <span className="flex-1 truncate uppercase tracking-wider">{p.title}</span>
                       <span className="text-dim">{formatMoney(p.price)}</span>
                     </button>
                   </li>
                 ))}
               </ol>
-              <button
-                onClick={() => step(1)}
-                className="grid size-11 place-items-center rounded-full border border-line transition hover:border-chalk md:hidden"
-                aria-label="Cuadro siguiente"
-              >
-                <ArrowRight size={16} />
-              </button>
             </div>
           </div>
         </div>
@@ -142,9 +142,13 @@ export default function App() {
         <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
           <h2 className="text-3xl font-semibold tracking-tighter md:text-5xl">La colección</h2>
           {!isShopifyConfigured && (
-            <p className="font-mono text-xs uppercase tracking-widest text-dim">Catálogo de muestra</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-dim">
+              Catálogo de muestra
+            </p>
           )}
-          {loadError && <p className="text-sm text-red-400">No se pudo cargar Shopify: {loadError}</p>}
+          {loadError && (
+            <p className="text-sm text-red-400">No se pudo cargar Shopify: {loadError}</p>
+          )}
         </div>
 
         <ul className="divide-y divide-line border-y border-line">
@@ -163,10 +167,17 @@ export default function App() {
                 <span className="font-mono text-sm text-dim">{p.number}</span>
                 <div
                   className="hidden aspect-[4/5] w-full overflow-hidden rounded-lg border border-line md:block"
-                  style={{ background: `radial-gradient(circle at 50% 40%, ${p.model.backdrop.center}, ${p.model.backdrop.edge})` }}
+                  style={{
+                    background: `radial-gradient(circle at 50% 40%, ${p.model.backdrop.center}, ${p.model.backdrop.edge})`,
+                  }}
                 >
                   {p.image && (
-                    <img src={p.image} alt={p.title} loading="lazy" className="size-full object-cover" />
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      loading="lazy"
+                      className="size-full object-cover"
+                    />
                   )}
                 </div>
                 <div>
@@ -215,7 +226,9 @@ export default function App() {
       </section>
 
       <footer className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-5 py-10 font-mono text-xs text-dim md:px-10">
-        <span>© {new Date().getFullYear()} {shopName}</span>
+        <span>
+          © {new Date().getFullYear()} {shopName}
+        </span>
         <span className="max-w-[70ch]">
           LEGO®, Technic y las marcas de los equipos de F1 pertenecen a sus respectivos dueños.
         </span>

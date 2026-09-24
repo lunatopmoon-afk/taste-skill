@@ -6,7 +6,7 @@ import * as THREE from 'three'
 import { LedFrame, FRAME_W, FRAME_H } from './LedFrame.jsx'
 
 // Pared de la galería: los cuadros cuelgan sobre una pared oscura texturizada.
-// Al entrar, los LED se encienden uno por uno con parpadeo de neón.
+// Al entrar, los cuadros caen uno por uno, se balancean y luego se encienden sus LED.
 // Pasar el cursor inclina el cuadro hacia ti, sube el LED y hace girar las ruedas.
 
 const GAP = 1.3
@@ -35,12 +35,63 @@ export function useWallTexture() {
   }, [])
 }
 
-function HangingFrame({ product, index, total, onSelect, onHover }) {
+const REDUCED_MOTION =
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+// Separación entre cuadros: en pantallas verticales (celular) van más juntos para que quepan los tres
+function spacingFor(aspect) {
+  return FRAME_W + (aspect < 1 ? 0.3 : GAP)
+}
+
+// Caída de entrada: cada cuadro cae desde arriba, rebota al "engancharse" en el clavo
+// y se balancea hasta quedar quieto. Luego se encienden sus luces.
+const DROP_HEIGHT = 9
+const GRAVITY = 34
+const DROP_START = 0.25
+const DROP_STAGGER = 0.28
+const FALL_TIME = Math.sqrt((2 * DROP_HEIGHT) / GRAVITY)
+
+function HangingFrame({ product, index, x, onSelect, onHover }) {
+  const drop = useRef()
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
-  const x = (index - (total - 1) / 2) * SPACING
+  const sim = useRef({
+    y: REDUCED_MOTION ? 0 : DROP_HEIGHT,
+    vy: 0,
+    rz: 0,
+    vrz: 0,
+    t: 0,
+    done: REDUCED_MOTION,
+  })
+  const startAt = DROP_START + index * DROP_STAGGER
 
-  useFrame(({ pointer }, dt) => {
+  useFrame(({ pointer }, rawDt) => {
+    const dt = Math.min(rawDt, 1 / 30)
+    const st = sim.current
+    if (!st.done) {
+      st.t += dt
+      if (st.t > startAt) {
+        st.vy -= GRAVITY * dt
+        st.y += st.vy * dt
+        if (st.y <= 0) {
+          const impact = -st.vy
+          st.y = 0
+          st.vy = impact > 1.2 ? impact * 0.22 : 0
+          // el golpe lo hace balancearse, cada cuadro hacia un lado distinto
+          st.vrz += impact * 0.006 * (index % 2 ? 1 : -1)
+        }
+      }
+      // balanceo amortiguado sobre el clavo
+      st.vrz += (-38 * st.rz - 2.4 * st.vrz) * dt
+      st.rz += st.vrz * dt
+      if (st.t > startAt + FALL_TIME + 3 && Math.abs(st.rz) < 0.0005 && st.y === 0) {
+        st.done = true
+        st.rz = 0
+      }
+    }
+    drop.current.position.y = st.y
+    drop.current.rotation.z = st.rz
+
     const g = ref.current
     // Inclinación suave para que se note el relieve del LEGO, sin perder la fila
     const tx = hovered ? -pointer.y * 0.14 : 0
@@ -51,53 +102,87 @@ function HangingFrame({ product, index, total, onSelect, onHover }) {
   })
 
   return (
-    <group position={[x, 0, 0]}>
-      <group
-        ref={ref}
-        onPointerOver={(e) => {
-          e.stopPropagation()
-          setHovered(true)
-          onHover(index)
-          document.body.style.cursor = 'pointer'
-        }}
-        onPointerOut={() => {
-          setHovered(false)
-          document.body.style.cursor = ''
-        }}
-        onClick={(e) => {
-          e.stopPropagation()
-          onSelect(product)
-        }}
-      >
-        <LedFrame product={product} hovered={hovered} introDelay={0.6 + index * 0.45} />
+    // El pivote del balanceo está arriba, donde iría el clavo
+    <group position={[x, FRAME_H / 2, 0]}>
+      <group ref={drop}>
+        <group position={[0, -FRAME_H / 2, 0]}>
+          <group
+            ref={ref}
+            onPointerOver={(e) => {
+              e.stopPropagation()
+              setHovered(true)
+              onHover(index)
+              document.body.style.cursor = 'pointer'
+            }}
+            onPointerOut={() => {
+              setHovered(false)
+              document.body.style.cursor = ''
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onSelect(product)
+            }}
+          >
+            <LedFrame
+              product={product}
+              hovered={hovered}
+              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : startAt + FALL_TIME + 0.35}
+            />
+          </group>
+        </group>
       </group>
     </group>
   )
 }
 
-function CameraRig({ total, active }) {
+function CameraRig({ total, spacing }) {
   const { camera, size } = useThree()
   useFrame(({ pointer }, dt) => {
     const aspect = size.width / size.height
-    const carousel = aspect < 1.05
+    const portrait = aspect < 1
     const fov = THREE.MathUtils.degToRad(camera.fov)
-    const fitW = carousel ? SPACING * 1.02 : total * SPACING + 0.4
+    // Siempre se ven los tres cuadros completos, también en el celular
+    const fitW = total * spacing + (portrait ? 0.5 : 0.4)
     const distW = fitW / 2 / Math.tan(fov / 2) / aspect
     const distH = (FRAME_H + 2.4) / 2 / Math.tan(fov / 2)
     const dist = Math.max(distW, distH)
-    const focusX = carousel ? (active - (total - 1) / 2) * SPACING : 0
+    // En vertical el texto ocupa la parte de abajo: los cuadros suben al tercio superior
+    const visibleH = 2 * dist * Math.tan(fov / 2)
+    const baseY = portrait ? -visibleH * 0.16 : -0.95
 
     // Cámara de frente y a la altura de los cuadros: todos quedan derechos y en línea
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, focusX + pointer.x * 0.12, 2.5, dt)
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, -0.95 + pointer.y * 0.08, 2.5, dt)
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.12, 2.5, dt)
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, baseY + pointer.y * 0.08, 2.5, dt)
     camera.position.z = THREE.MathUtils.damp(camera.position.z, dist, 2.5, dt)
     camera.lookAt(camera.position.x, camera.position.y, 0)
   })
   return null
 }
 
+function Frames({ products, onActiveChange, onSelect }) {
+  const size = useThree((state) => state.size)
+  const spacing = spacingFor(size.width / size.height)
+  return (
+    <>
+      <Suspense fallback={null}>
+        {products.map((p, i) => (
+          <HangingFrame
+            key={p.id}
+            product={p}
+            index={i}
+            x={(i - (products.length - 1) / 2) * spacing}
+            onHover={onActiveChange}
+            onSelect={onSelect}
+          />
+        ))}
+      </Suspense>
+      <CameraRig total={products.length} spacing={spacing} />
+    </>
+  )
+}
+
 // paused: el visor de producto está abierto encima, así que la pared deja de dibujar
-export function GalleryWall({ products, active, onActiveChange, onSelect, paused = false }) {
+export function GalleryWall({ products, onActiveChange, onSelect, paused = false }) {
   const wall = useWallTexture()
   return (
     <Canvas
@@ -125,29 +210,26 @@ export function GalleryWall({ products, active, onActiveChange, onSelect, paused
       />
 
       <mesh position={[0, 0, -0.06]} receiveShadow>
-        <planeGeometry args={[70, 24]} />
+        <planeGeometry args={[70, 40]} />
         <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
       </mesh>
 
-      <Suspense fallback={null}>
-        {products.map((p, i) => (
-          <HangingFrame
-            key={p.id}
-            product={p}
-            index={i}
-            total={products.length}
-            onHover={onActiveChange}
-            onSelect={onSelect}
-          />
-        ))}
-      </Suspense>
-
-      <CameraRig total={products.length} active={active} />
+      <Frames products={products} onActiveChange={onActiveChange} onSelect={onSelect} />
 
       <Environment resolution={256}>
         <Lightformer intensity={2} position={[0, 4, 4]} scale={[10, 2, 1]} />
-        <Lightformer intensity={0.7} position={[-6, 0, 3]} rotation-y={Math.PI / 3} scale={[4, 6, 1]} />
-        <Lightformer intensity={0.7} position={[6, 0, 3]} rotation-y={-Math.PI / 3} scale={[4, 6, 1]} />
+        <Lightformer
+          intensity={0.7}
+          position={[-6, 0, 3]}
+          rotation-y={Math.PI / 3}
+          scale={[4, 6, 1]}
+        />
+        <Lightformer
+          intensity={0.7}
+          position={[6, 0, 3]}
+          rotation-y={-Math.PI / 3}
+          scale={[4, 6, 1]}
+        />
       </Environment>
 
       <EffectComposer multisampling={4}>
