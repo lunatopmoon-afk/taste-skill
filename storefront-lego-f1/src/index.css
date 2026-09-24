@@ -5,12 +5,14 @@
 @theme {
   --font-sans: 'Geist Variable', system-ui, sans-serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
-  --color-asphalt: #0e0f11;
-  --color-pit: #16171a;
-  --color-line: #26282c;
-  --color-chalk: #ecedee;
-  --color-dim: #8b8f96;
-  --color-signal: #f2c46d;
+  /* Negro de lujo: casi puro, con grises muy cercanos para dar capas */
+  --color-asphalt: #060607;
+  --color-pit: #0c0c0e;
+  --color-line: #1d1c1f;
+  --color-chalk: #f1efe9;
+  --color-dim: #8d8a84;
+  /* Único acento: oro champán */
+  --color-signal: #e4c07e;
 }
 
 html {
@@ -25,8 +27,86 @@ body {
   background: var(--color-asphalt);
 }
 
+/* Grano fino sobre toda la página: quita el aspecto "plano digital" del negro */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
 canvas {
   touch-action: pan-y;
+}
+
+@layer components {
+  /* Texto en oro metálico */
+  .gold-text {
+    background: linear-gradient(100deg, #9c7a3c 0%, #f3dca6 28%, #c89a4e 52%, #fff0c9 70%, #b68a45 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Botón principal: oro con destello que cruza al pasar el cursor */
+  .btn-gold {
+    position: relative;
+    overflow: hidden;
+    color: #120e06;
+    background: linear-gradient(135deg, #b58d4a 0%, #f2d9a0 45%, #c79a53 75%, #e9cf94 100%);
+    box-shadow:
+      0 0 0 1px rgb(255 232 180 / 0.35) inset,
+      0 10px 30px -10px rgb(228 192 126 / 0.55);
+    transition: transform 0.2s ease, box-shadow 0.3s ease, filter 0.3s ease;
+  }
+  .btn-gold::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.8s ease;
+  }
+  .btn-gold:hover::after {
+    transform: translateX(120%);
+  }
+  .btn-gold:hover {
+    box-shadow:
+      0 0 0 1px rgb(255 232 180 / 0.5) inset,
+      0 14px 40px -10px rgb(228 192 126 / 0.75);
+  }
+
+  /* Vidrio oscuro con filo dorado */
+  .glass {
+    background: linear-gradient(180deg, rgb(22 21 24 / 0.72), rgb(8 8 9 / 0.72));
+    border: 1px solid rgb(228 192 126 / 0.16);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.05) inset,
+      0 20px 60px -20px rgb(0 0 0 / 0.8);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  /* Fibra de carbono muy sutil, como el piso de un box de F1 */
+  .carbon {
+    background-color: #0a0a0b;
+    background-image:
+      linear-gradient(45deg, rgb(255 255 255 / 0.018) 25%, transparent 25%, transparent 75%, rgb(255 255 255 / 0.018) 75%),
+      linear-gradient(45deg, rgb(255 255 255 / 0.018) 25%, transparent 25%, transparent 75%, rgb(255 255 255 / 0.018) 75%),
+      radial-gradient(120% 80% at 50% 0%, rgb(228 192 126 / 0.06), transparent 60%);
+    background-size: 8px 8px, 8px 8px, 100% 100%;
+    background-position: 0 0, 4px 4px, 0 0;
+  }
+
+  /* Línea fina dorada que se desvanece en los extremos */
+  .gold-rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(228 192 126 / 0.55), transparent);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

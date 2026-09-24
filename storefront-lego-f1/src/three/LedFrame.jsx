@@ -217,7 +217,141 @@ function shadeEmissiveByVertexColor(shader) {
   )
 }
 
-function PhotoPoster({ src, srcSmall, relief, width, height, material }) {
+// ---------- llantas 3D ----------
+// Las llantas son lo que más sobresale del cuadro real (ver videos del producto), así que
+// no se "estiran" desde la foto: son cilindros reales. La banda de rodadura usa la misma
+// foto proyectada de frente (de frente se ve idéntica a la foto) y el costado lleva
+// neumático, banda de color del compuesto, rin y centro.
+
+let sidewallCache = new Map()
+function sidewallTexture(band) {
+  if (sidewallCache.has(band)) return sidewallCache.get(band)
+  const S = 512
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const ctx = c.getContext('2d')
+  const R0 = S / 2
+  const ring = (r, fill) => {
+    ctx.beginPath()
+    ctx.arc(R0, R0, r * R0, 0, Math.PI * 2)
+    ctx.fillStyle = fill
+    ctx.fill()
+  }
+  // goma: negro satinado con un leve degradado
+  const rubber = ctx.createRadialGradient(R0, R0, R0 * 0.6, R0, R0, R0)
+  rubber.addColorStop(0, '#1b1b1d')
+  rubber.addColorStop(0.85, '#111112')
+  rubber.addColorStop(1, '#070708')
+  ring(1, rubber)
+  // banda de color del compuesto
+  ring(0.86, band)
+  ring(0.8, '#141415')
+  // letras del flanco, sugeridas con trazos finos
+  ctx.save()
+  ctx.translate(R0, R0)
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'
+  for (let i = 0; i < 28; i++) {
+    ctx.rotate((Math.PI * 2) / 28)
+    if (i % 7 < 4) ctx.fillRect(-4, -R0 * 0.95, 8, R0 * 0.05)
+  }
+  ctx.restore()
+  // rin: gris grafito con agujeros tipo Technic
+  const rim = ctx.createRadialGradient(R0 * 0.85, R0 * 0.8, 0, R0, R0, R0 * 0.62)
+  rim.addColorStop(0, '#4a4c50')
+  rim.addColorStop(1, '#1d1e21')
+  ring(0.62, rim)
+  ring(0.6, 'rgba(0,0,0,0)')
+  ctx.fillStyle = '#0b0b0c'
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2
+    ctx.beginPath()
+    ctx.arc(R0 + Math.cos(a) * R0 * 0.38, R0 + Math.sin(a) * R0 * 0.38, R0 * 0.09, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // centro
+  const hub = ctx.createRadialGradient(R0 * 0.95, R0 * 0.92, 0, R0, R0, R0 * 0.2)
+  hub.addColorStop(0, '#b9bcc1')
+  hub.addColorStop(1, '#55585d')
+  ring(0.2, hub)
+  ring(0.07, '#1a1a1c')
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 8
+  sidewallCache.set(band, t)
+  return t
+}
+
+// Sombra de contacto debajo de cada llanta
+let contactTexture
+function getContactTexture() {
+  if (contactTexture) return contactTexture
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const ctx = c.getContext('2d')
+  const g = ctx.createRadialGradient(64, 64, 10, 64, 64, 64)
+  g.addColorStop(0, 'rgba(0,0,0,0.95)')
+  g.addColorStop(0.6, 'rgba(0,0,0,0.6)')
+  g.addColorStop(1, 'rgba(0,0,0,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 128, 128)
+  contactTexture = new THREE.CanvasTexture(c)
+  return contactTexture
+}
+
+function tireGeometry(box, width, height) {
+  const [cx, cy, bw, bh] = box
+  const radius = (bh * height) / 2
+  const length = bw * width
+  const X = (cx - 0.5) * width
+  const Y = (0.5 - cy) * height
+  const radial = 72
+  const geo = new THREE.CylinderGeometry(radius, radius, length, radial, 1)
+  geo.rotateZ(Math.PI / 2) // eje de la llanta: horizontal, paralelo a la pared
+  // Banda de rodadura: proyección de frente de la foto (coincide exacto con el póster)
+  const pos = geo.attributes.position
+  const uv = geo.attributes.uv
+  const sideCount = (radial + 1) * 2
+  for (let i = 0; i < sideCount; i++) {
+    uv.setXY(i, (X + pos.getX(i) + width / 2) / width, (Y + pos.getY(i) + height / 2) / height)
+  }
+  uv.needsUpdate = true
+  return { geo, radius, length, X, Y }
+}
+
+function Tire({ box, width, height, treadMat, sideMat }) {
+  const { geo, radius, length, X, Y } = useMemo(
+    () => tireGeometry(box, width, height),
+    [box, width, height],
+  )
+  useEffect(() => () => geo.dispose(), [geo])
+  const contact = useMemo(getContactTexture, [])
+  return (
+    <group>
+      <mesh position={[X, Y, 0.006]} renderOrder={1}>
+        <planeGeometry args={[length * 1.25, radius * 2.3]} />
+        <meshBasicMaterial map={contact} transparent depthWrite={false} opacity={0.9} />
+      </mesh>
+      <mesh
+        position={[X, Y, radius + 0.004]}
+        geometry={geo}
+        material={[treadMat, sideMat, sideMat]}
+        castShadow
+      />
+    </group>
+  )
+}
+
+function PhotoPoster({
+  src,
+  srcSmall,
+  relief,
+  width,
+  height,
+  material,
+  wheels,
+  treadMat,
+  sideMat,
+}) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   const [texture, heightMap] = useTexture([
     SMALL_SCREEN && srcSmall ? srcSmall : src,
@@ -231,13 +365,32 @@ function PhotoPoster({ src, srcSmall, relief, width, height, material }) {
     material.map = texture
     material.emissiveMap = texture
     material.needsUpdate = true
-  }, [texture, material, maxAnisotropy])
+    if (treadMat) {
+      treadMat.map = texture
+      treadMat.emissiveMap = texture
+      treadMat.needsUpdate = true
+    }
+  }, [texture, material, treadMat, maxAnisotropy])
   const geometry = useMemo(
     () => reliefGeometry(width, height, relief ? heightMap.image : null),
     [width, height, relief, heightMap],
   )
   useEffect(() => () => geometry.dispose(), [geometry])
-  return <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+  return (
+    <>
+      <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+      {wheels?.map((box, i) => (
+        <Tire
+          key={i}
+          box={box}
+          width={width}
+          height={height}
+          treadMat={treadMat}
+          sideMat={sideMat}
+        />
+      ))}
+    </>
+  )
 }
 
 // Reflejo del vidrio: una franja de brillo que se desliza con el movimiento
@@ -306,6 +459,28 @@ export function LedFrame({
     mat.onBeforeCompile = shadeEmissiveByVertexColor
     return mat
   }, [])
+  // Banda de rodadura: misma foto y mismo brillo que el póster, sin sombreado de costados
+  const treadMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        toneMapped: false,
+        emissive: '#ffffff',
+        roughness: 0.75,
+        metalness: 0,
+      }),
+    [],
+  )
+  const sideMat = useMemo(() => {
+    const tex = sidewallTexture(model.tires ?? '#f2c40c')
+    return new THREE.MeshStandardMaterial({
+      map: tex,
+      emissive: '#ffffff',
+      emissiveMap: tex,
+      emissiveIntensity: 0.28,
+      roughness: 0.7,
+      metalness: 0.1,
+    })
+  }, [model])
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
@@ -321,29 +496,34 @@ export function LedFrame({
     () => () => {
       ledMat.dispose()
       photoMat.dispose()
+      treadMat.dispose()
+      sideMat.dispose()
     },
-    [ledMat, photoMat],
+    [ledMat, photoMat, treadMat, sideMat],
   )
   const borderColor = useMemo(() => new THREE.Color(model.led.border ?? '#000000'), [model])
 
   useFrame(({ clock, pointer }, dt) => {
-    // Encendido con parpadeo tipo neón al entrar a la página
+    // Encendido al entrar: la luz cálida se prende con un destello en el instante en
+    // que el cuadro cae en su lugar, y luego se asienta en su brillo normal
     if (start.current === null) start.current = clock.elapsedTime
     const t = clock.elapsedTime - start.current - introDelay
-    let target = ledOn ? (hovered ? 1.35 : 1) : 0
-    if (t < 0) target = 0
-    else if (t < 0.8 && ledOn) target = Math.sin(t * 60) > 0.2 || t > 0.6 ? target : 0.1
-    level.current = t < 0.8 ? target : THREE.MathUtils.damp(level.current, target, 6, dt)
+    const target = ledOn ? (hovered ? 1.3 : 1) : 0
+    if (t < 0) level.current = 0
+    else if (t < 0.09 && ledOn) level.current = 2.1
+    else level.current = THREE.MathUtils.damp(level.current, target, 3.5, dt)
     const k = level.current
 
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)
-    if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * k * 0.9
+    if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * Math.min(k, 1.6) * 0.9
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
     const glow = 0.3 + Math.min(k, 1.12) * 0.7
     // Casi todo el color viene de la foto; la luz solo sombrea los costados del relieve
     photoMat.emissiveIntensity = glow * 0.92
     photoMat.color.setScalar(glow * 0.22)
+    treadMat.emissiveIntensity = glow * 0.92
+    treadMat.color.setScalar(glow * 0.22)
     if (glossMat.current) {
       gloss.offset.x = THREE.MathUtils.damp(gloss.offset.x, -pointer.x * 0.35 + 0.1, 3, dt)
       glossMat.current.opacity = THREE.MathUtils.damp(
@@ -423,6 +603,9 @@ export function LedFrame({
           width={innerW}
           height={innerH}
           material={photoMat}
+          wheels={model.wheels}
+          treadMat={treadMat}
+          sideMat={sideMat}
         />
       ) : (
         <mesh position={[0, 0, 0.002]} receiveShadow>

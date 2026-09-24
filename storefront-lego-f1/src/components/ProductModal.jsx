@@ -151,7 +151,7 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
           {showSidePhoto
             ? 'Foto real de costado · clic para ampliar'
             : hasPhoto
-              ? 'Arrastra para girar · rueda o pellizca para acercarte'
+              ? 'Desliza a los lados para ver cómo sobresale el LEGO'
               : open
                 ? 'Mueve el cursor: las ruedas delanteras giran contigo'
                 : 'Arrastra para girar · doble clic saca el auto'}
@@ -165,7 +165,7 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
         </button>
       </div>
 
-      <aside className="flex flex-col gap-7 overflow-y-auto border-line bg-pit px-6 py-8 lg:border-l lg:px-10 lg:py-12">
+      <aside className="flex flex-col gap-7 overflow-y-auto border-line bg-[#09090a] px-6 py-8 lg:border-l lg:px-10 lg:py-12">
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-dim">
             N.º {product.number} · {product.model.code}
@@ -270,7 +270,7 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
           <button
             onClick={() => onAdd(product, variant)}
             disabled={busy || !variant?.availableForSale}
-            className="mt-2 flex items-center justify-center gap-2 rounded-full bg-signal px-6 py-4 text-sm font-semibold text-asphalt transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+            className="mt-2 flex items-center justify-center gap-2 rounded-full btn-gold px-6 py-4 text-sm font-semibold active:scale-[0.98] disabled:opacity-50"
           >
             <ShoppingBagOpen size={18} weight="bold" />
             {variant?.availableForSale ? 'Agregar al carrito' : 'Agotado'}

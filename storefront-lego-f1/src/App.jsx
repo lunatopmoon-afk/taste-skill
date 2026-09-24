@@ -18,8 +18,8 @@ const SPECS = [
     'El modelo completo, armado pieza por pieza y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.',
   ],
   [
-    'Luz LED',
-    'Línea de luz alrededor del póster o retroiluminación que baña la pared, según el modelo.',
+    'Retroiluminación LED',
+    'Luz cálida detrás del marco que baña la pared y hace que el auto flote en la oscuridad.',
   ],
   ['Fondo del equipo', 'Póster con el color de la escudería y el nombre del auto al pie.'],
   ['Marco negro', 'Perfil delgado negro mate para que todo el protagonismo sea del auto.'],
@@ -69,7 +69,7 @@ export default function App() {
           </a>
           <button
             onClick={() => setCartOpen(true)}
-            className="relative grid size-11 place-items-center rounded-full border border-line bg-pit/70 backdrop-blur transition hover:border-chalk"
+            className="glass relative grid size-11 place-items-center rounded-full transition hover:border-signal"
             aria-label="Abrir carrito"
           >
             <ShoppingBag size={18} />
@@ -99,7 +99,7 @@ export default function App() {
           <div className="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="max-w-[16ch] text-4xl font-semibold leading-[1.02] tracking-tighter md:text-6xl">
-                Tu F1 favorito, colgado en tu pared.
+                Tu F1 favorito, <span className="gold-text">colgado en tu pared.</span>
               </h1>
               <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-dim">
                 Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Toca un cuadro para
@@ -109,7 +109,7 @@ export default function App() {
 
             {/* Torre de tiempos: selector de cuadros */}
             <div className="pointer-events-auto">
-              <ol className="w-full min-w-[260px] divide-y divide-line rounded-2xl border border-line bg-pit/80 font-mono text-xs backdrop-blur md:w-[320px]">
+              <ol className="glass w-full min-w-[260px] divide-y divide-line rounded-2xl font-mono text-xs md:w-[320px]">
                 {products.map((p, i) => (
                   <li key={p.id}>
                     <button
@@ -140,7 +140,9 @@ export default function App() {
       {/* COLECCIÓN */}
       <section id="coleccion" className="mx-auto max-w-[1400px] px-5 py-24 md:px-10 md:py-32">
         <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-3xl font-semibold tracking-tighter md:text-5xl">La colección</h2>
+          <h2 className="text-3xl font-semibold tracking-tighter md:text-5xl">
+            La <span className="gold-text">colección</span>
+          </h2>
           {!isShopifyConfigured && (
             <p className="font-mono text-xs uppercase tracking-widest text-dim">
               Catálogo de muestra
@@ -151,7 +153,8 @@ export default function App() {
           )}
         </div>
 
-        <ul className="divide-y divide-line border-y border-line">
+        <ul className="divide-y divide-line">
+          <li aria-hidden className="gold-rule" />
           {products.map((p, i) => (
             <motion.li
               key={p.id}
@@ -166,7 +169,7 @@ export default function App() {
               >
                 <span className="font-mono text-sm text-dim">{p.number}</span>
                 <div
-                  className="hidden aspect-[4/5] w-full overflow-hidden rounded-lg border border-line md:block"
+                  className="hidden aspect-[4/5] w-full overflow-hidden rounded-lg border border-line shadow-[0_18px_40px_-18px_rgba(228,192,126,0.45)] transition duration-500 group-hover:border-signal/60 group-hover:shadow-[0_22px_50px_-14px_rgba(228,192,126,0.7)] md:block"
                   style={{
                     background: `radial-gradient(circle at 50% 40%, ${p.model.backdrop.center}, ${p.model.backdrop.edge})`,
                   }}
@@ -176,7 +179,7 @@ export default function App() {
                       src={p.image}
                       alt={p.title}
                       loading="lazy"
-                      className="size-full object-cover"
+                      className="size-full object-cover transition duration-700 group-hover:scale-[1.04]"
                     />
                   )}
                 </div>
@@ -198,7 +201,8 @@ export default function App() {
       </section>
 
       {/* DETALLES */}
-      <section id="detalles" className="border-t border-line bg-pit">
+      <section id="detalles" className="carbon relative">
+        <div className="gold-rule absolute inset-x-0 top-0" />
         <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-24 md:grid-cols-[1fr_1.4fr] md:px-10 md:py-32">
           <div>
             <p className="font-mono text-xs uppercase tracking-widest text-signal">Ficha técnica</p>
@@ -207,15 +211,18 @@ export default function App() {
             </h2>
             <button
               onClick={() => setSelected(current)}
-              className="mt-8 rounded-full bg-signal px-6 py-4 text-sm font-semibold text-asphalt transition hover:brightness-110 active:scale-[0.98]"
+              className="btn-gold mt-8 rounded-full px-6 py-4 text-sm font-semibold active:scale-[0.98]"
             >
               Abrir {current?.title} en 3D
             </button>
           </div>
-          <dl className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+          <dl className="grid gap-px overflow-hidden rounded-2xl border border-signal/15 bg-signal/10 sm:grid-cols-2">
             {SPECS.map(([title, text], i) => (
-              <div key={title} className={`bg-pit p-6 md:p-8 ${i === 0 ? 'sm:col-span-2' : ''}`}>
-                <dt className="font-mono text-xs uppercase tracking-widest text-dim">
+              <div
+                key={title}
+                className={`bg-[#09090a]/95 p-6 md:p-8 ${i === 0 ? 'sm:col-span-2' : ''}`}
+              >
+                <dt className="font-mono text-xs uppercase tracking-widest text-signal/80">
                   {String(i + 1).padStart(2, '0')} · {title}
                 </dt>
                 <dd className="mt-3 max-w-[48ch] leading-relaxed">{text}</dd>
@@ -225,6 +232,7 @@ export default function App() {
         </div>
       </section>
 
+      <div className="gold-rule" />
       <footer className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-5 py-10 font-mono text-xs text-dim md:px-10">
         <span>
           © {new Date().getFullYear()} {shopName}

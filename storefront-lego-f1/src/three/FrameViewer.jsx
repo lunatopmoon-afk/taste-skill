@@ -46,10 +46,10 @@ export function FrameViewer({
       shadows
       frameloop={paused ? 'never' : 'always'}
       dpr={[1, 3]}
-      camera={{ position: [1.2, 0.3, 8], fov: 38 }}
+      camera={{ position: [0, 0, 7.6], fov: 38 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
     >
-      <color attach="background" args={['#0b0b0c']} />
+      <color attach="background" args={['#060607']} />
       <ambientLight intensity={ledOn ? 0.2 : 0.35} />
       <directionalLight
         position={[-3, 6, 7]}
@@ -65,10 +65,10 @@ export function FrameViewer({
       />
       <Suspense fallback={null}>
         {/* La pared gira con el cuadro: es como caminar hacia un lado */}
-        <Turntable angle={sideView ? 0.5 : 0}>
+        <Turntable angle={sideView ? 0.45 : 0}>
           <mesh position={[0, 0, -0.06]} receiveShadow>
             <planeGeometry args={[30, 20]} />
-            <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
+            <meshStandardMaterial color="#141416" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
           </mesh>
           <group
             onDoubleClick={(e) => {
@@ -87,16 +87,20 @@ export function FrameViewer({
           </group>
         </Turntable>
       </Suspense>
+      {/* Solo se gira de izquierda a derecha, en un rango corto: sin subir, bajar, acercar
+          ni alejar, y sin llegar a ver el borde de la pared */}
       <OrbitControls
         makeDefault
         enablePan={false}
-        minDistance={2}
-        maxDistance={11}
-        minPolarAngle={Math.PI * 0.22}
-        maxPolarAngle={Math.PI * 0.65}
-        minAzimuthAngle={-Math.PI * 0.42}
-        maxAzimuthAngle={Math.PI * 0.42}
-        target={[0, 0, 0.5]}
+        enableZoom={false}
+        enableDamping
+        dampingFactor={0.08}
+        rotateSpeed={0.55}
+        minPolarAngle={Math.PI / 2}
+        maxPolarAngle={Math.PI / 2}
+        minAzimuthAngle={-0.45}
+        maxAzimuthAngle={0.45}
+        target={[0, 0, 0.3]}
       />
       <Environment resolution={256}>
         <Lightformer intensity={2.2} position={[0, 5, 3]} scale={[8, 2, 1]} />
