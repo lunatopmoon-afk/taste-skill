@@ -35,7 +35,7 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, o
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={[1, 3]}
       camera={{ position: [1.2, 0.3, 8], fov: 38 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
     >
@@ -55,7 +55,7 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, o
       />
       <Suspense fallback={null}>
         {/* La pared gira con el cuadro: es como caminar hacia un lado */}
-        <Turntable angle={sideView ? -0.62 : 0}>
+        <Turntable angle={sideView ? -0.5 : 0}>
           <mesh position={[0, 0, -0.06]} receiveShadow>
             <planeGeometry args={[30, 20]} />
             <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
@@ -80,7 +80,7 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, o
       <OrbitControls
         makeDefault
         enablePan={false}
-        minDistance={3.5}
+        minDistance={2}
         maxDistance={11}
         minPolarAngle={Math.PI * 0.22}
         maxPolarAngle={Math.PI * 0.65}

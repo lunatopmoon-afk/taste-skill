@@ -12,10 +12,11 @@ const WARM_HALO = '#ffbf6e'
 export const MODELS = {
   mercedes: {
     key: 'mercedes',
-    // Foto real del cuadro, recortada al borde interior del marco
-    poster: '/cuadros/mercedes.webp',
+    // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
+    poster: '/cuadros/mercedes-4k.webp', // 4K (escalada con IA desde la foto original)
+    posterSmall: '/cuadros/mercedes-2k.webp', // versión liviana para celular
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
-    posterAspect: 0.6399,
+    posterAspect: 0.5822,
     match: /(mercedes|amg|w14|petronas)/i,
     code: 'W14',
     title: ['Mercedes-AMG', 'F1 W14 E Performance'],
@@ -43,8 +44,9 @@ export const MODELS = {
   },
   redbull: {
     key: 'redbull',
-    // Foto real del cuadro, recortada al borde interior del marco
-    poster: '/cuadros/redbull.webp',
+    // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
+    poster: '/cuadros/redbull-4k.webp', // 4K (escalada con IA desde la foto original)
+    posterSmall: '/cuadros/redbull-2k.webp', // versión liviana para celular
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.6955,
     match: /(red ?bull|rb-?20|oracle)/i,
@@ -74,10 +76,11 @@ export const MODELS = {
   },
   ferrari: {
     key: 'ferrari',
-    // Foto real del cuadro, recortada al borde interior del marco
-    poster: '/cuadros/ferrari.webp',
+    // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
+    poster: '/cuadros/ferrari-4k.webp', // 4K (escalada con IA desde la foto original)
+    posterSmall: '/cuadros/ferrari-2k.webp', // versión liviana para celular
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
-    posterAspect: 0.609,
+    posterAspect: 0.5802,
     match: /(ferrari|sf-?24|scuderia)/i,
     code: 'SF-24',
     title: ['Ferrari SF-24', 'Formula One Racing'],

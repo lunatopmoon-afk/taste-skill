@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { LegoF1Car, UNIT, CAR_CENTER_Z } from './LegoF1Car.jsx'
@@ -156,8 +156,27 @@ function usePoster(model) {
 // (mapa de alturas `*-relieve.png`), así las llantas, la carrocería y los alerones
 // sobresalen del fondo. La foto se ve con sus colores reales (emisiva, sin tone mapping)
 // y la luz de la escena sombrea los costados del relieve.
-const RELIEF_DEPTH = 0.3
-const RELIEF_SEGMENTS = 220
+const RELIEF_DEPTH = 0.26
+// En pantallas chicas: texturas 2K y menos vértices, para que el celular vaya fluido
+const SMALL_SCREEN =
+  typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
+const RELIEF_SEGMENTS = SMALL_SCREEN ? 200 : 380
+
+// Muestreo bilineal del mapa de alturas: bordes del relieve suaves, sin escalones
+function sampleHeight(data, w, h, u, v) {
+  const x = u * (w - 1)
+  const y = v * (h - 1)
+  const x0 = Math.floor(x)
+  const y0 = Math.floor(y)
+  const x1 = Math.min(x0 + 1, w - 1)
+  const y1 = Math.min(y0 + 1, h - 1)
+  const fx = x - x0
+  const fy = y - y0
+  const at = (px, py) => data[(py * w + px) * 4]
+  const top = at(x0, y0) * (1 - fx) + at(x1, y0) * fx
+  const bottom = at(x0, y1) * (1 - fx) + at(x1, y1) * fx
+  return (top * (1 - fy) + bottom * fy) / 255
+}
 
 function reliefGeometry(width, height, heightImage) {
   const segX = RELIEF_SEGMENTS
@@ -173,24 +192,46 @@ function reliefGeometry(width, height, heightImage) {
     const pos = geo.attributes.position
     const uv = geo.attributes.uv
     for (let i = 0; i < pos.count; i++) {
-      const px = Math.min(c.width - 1, Math.round(uv.getX(i) * (c.width - 1)))
-      const py = Math.min(c.height - 1, Math.round((1 - uv.getY(i)) * (c.height - 1)))
-      pos.setZ(i, (data[(py * c.width + px) * 4] / 255) * RELIEF_DEPTH)
+      const z = sampleHeight(data, c.width, c.height, uv.getX(i), 1 - uv.getY(i))
+      pos.setZ(i, z * RELIEF_DEPTH)
     }
     geo.computeVertexNormals()
   }
+  // Sombra en los costados del relieve: donde la superficie se inclina, se oscurece.
+  // Así los bordes del auto se ven como el costado de las piezas y no como foto estirada.
+  const normals = geo.attributes.normal
+  const colors = new Float32Array(normals.count * 3)
+  for (let i = 0; i < normals.count; i++) {
+    const facing = THREE.MathUtils.smoothstep(normals.getZ(i), 0.25, 0.92)
+    colors.fill(0.28 + 0.72 * facing, i * 3, i * 3 + 3)
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
   return geo
 }
 
-function PhotoPoster({ src, relief, width, height, material }) {
-  const [texture, heightMap] = useTexture([src, relief ?? src])
+// El color de la foto es emisivo: se multiplica también por el sombreado de costados
+function shadeEmissiveByVertexColor(shader) {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <emissivemap_fragment>',
+    '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n  totalEmissiveRadiance *= vColor.rgb;\n#endif',
+  )
+}
+
+function PhotoPoster({ src, srcSmall, relief, width, height, material }) {
+  const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
+  const [texture, heightMap] = useTexture([
+    SMALL_SCREEN && srcSmall ? srcSmall : src,
+    relief ?? src,
+  ])
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
-    texture.anisotropy = 8
+    texture.anisotropy = maxAnisotropy
+    texture.generateMipmaps = true
+    texture.minFilter = THREE.LinearMipmapLinearFilter
     material.map = texture
     material.emissiveMap = texture
     material.needsUpdate = true
-  }, [texture, material])
+  }, [texture, material, maxAnisotropy])
   const geometry = useMemo(
     () => reliefGeometry(width, height, relief ? heightMap.image : null),
     [width, height, relief, heightMap],
@@ -254,16 +295,17 @@ export function LedFrame({
   const innerH = INNER_H
   const innerW = hasPhoto ? INNER_H * model.posterAspect : INNER_W
   const frameW = innerW + BORDER * 2
-  const photoMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        toneMapped: false,
-        emissive: '#ffffff',
-        roughness: 0.55,
-        metalness: 0,
-      }),
-    [],
-  )
+  const photoMat = useMemo(() => {
+    const mat = new THREE.MeshStandardMaterial({
+      toneMapped: false,
+      emissive: '#ffffff',
+      roughness: 0.55,
+      metalness: 0,
+      vertexColors: true,
+    })
+    mat.onBeforeCompile = shadeEmissiveByVertexColor
+    return mat
+  }, [])
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
@@ -299,8 +341,9 @@ export function LedFrame({
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
     const glow = 0.3 + Math.min(k, 1.12) * 0.7
-    photoMat.emissiveIntensity = glow * 0.8
-    photoMat.color.setScalar(glow * 0.45)
+    // Casi todo el color viene de la foto; la luz solo sombrea los costados del relieve
+    photoMat.emissiveIntensity = glow * 0.92
+    photoMat.color.setScalar(glow * 0.22)
     if (glossMat.current) {
       gloss.offset.x = THREE.MathUtils.damp(gloss.offset.x, -pointer.x * 0.35 + 0.1, 3, dt)
       glossMat.current.opacity = THREE.MathUtils.damp(
@@ -375,6 +418,7 @@ export function LedFrame({
       {hasPhoto ? (
         <PhotoPoster
           src={model.poster}
+          srcSmall={model.posterSmall}
           relief={model.relief}
           width={innerW}
           height={innerH}
