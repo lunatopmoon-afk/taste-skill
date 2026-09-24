@@ -55,6 +55,8 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
   const drop = useRef()
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
+  // La luz de atrás se prende cuando el cuadro realmente cae en su lugar
+  const [landed, setLanded] = useState(REDUCED_MOTION)
   const sim = useRef({
     y: REDUCED_MOTION ? 0 : DROP_HEIGHT,
     vy: 0,
@@ -74,6 +76,7 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
         st.vy -= GRAVITY * dt
         st.y += st.vy * dt
         if (st.y <= 0) {
+          if (!landed) setLanded(true)
           const impact = -st.vy
           st.y = 0
           st.vy = impact > 1.2 ? impact * 0.22 : 0
@@ -124,7 +127,8 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
             <LedFrame
               product={product}
               hovered={hovered}
-              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : startAt + FALL_TIME}
+              powered={landed}
+              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : 0}
             />
           </group>
         </group>
