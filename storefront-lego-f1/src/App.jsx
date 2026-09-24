@@ -82,6 +82,7 @@ export default function App() {
               active={active}
               onActiveChange={setActive}
               onSelect={setSelected}
+              paused={Boolean(selected)}
             />
           </div>
         </Suspense>

@@ -19,7 +19,7 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 - **Al entrar:** los cuadros se encienden uno por uno, con parpadeo de neón y el resplandor en la pared.
 - **Cursor sobre un cuadro:** el cuadro se inclina hacia ti y se acerca, sube el brillo y un reflejo recorre el vidrio.
 - **Clic:** abre el visor 3D. Ahí puedes girar el cuadro, acercarte con la rueda o pellizcando, y usar:
-  - **Vista lateral:** el cuadro gira como en la foto de costado.
+  - **Vista lateral:** el cuadro 3D gira y se funde con **la foto real de costado**, en 4K. Esa foto se retocó para que los tres queden iguales: sin línea de luz interior, marco negro y la misma luz cálida en la pared. Si mueves el cursor encima, se inclina un poco; con un clic se amplía.
   - **LED encendido/apagado.**
   - **Fotos reales**, para ampliarlas.
 - **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
@@ -32,7 +32,8 @@ Si agregas un modelo **sin foto**, se muestra un auto LEGO 3D procedural. Ese au
 1. Recorta la foto de frente justo por el borde interior del marco.
 2. Guárdala en `public/cuadros/<modelo>-4k.webp` (4096 px de alto) y `<modelo>-2k.webp` (2048 px). Si tienes la foto original en alta resolución, úsala directo: se verá todavía mejor.
 3. En `src/lib/models.js`, pon en `posterAspect` el ancho ÷ alto de la imagen.
-4. Para el relieve, crea `public/cuadros/<modelo>-relieve.png`: una imagen en escala de grises del mismo encuadre, con el negro como fondo plano y el blanco como la parte que más sobresale (las llantas). Si no existe, la foto se ve plana.
+4. Para la vista lateral, guarda la foto de costado como `<modelo>-lateral-4k.webp` y `<modelo>-lateral-2k.webp`.
+5. Para el relieve, crea `public/cuadros/<modelo>-relieve.png`: una imagen en escala de grises del mismo encuadre, con el negro como fondo plano y el blanco como la parte que más sobresale (las llantas). Si no existe, la foto se ve plana.
 
 ## 1. Conectar tu tienda
 
@@ -73,7 +74,7 @@ Si quieres fijarlo a mano, usa uno de estos:
 2. **Etiqueta** del producto: `modelo:mercedes`, `modelo:redbull` o `modelo:ferrari`.
 
 Los colores, el fondo y el LED de cada modelo están en `src/lib/models.js`.
-Las **fotos** del visor salen de las imágenes del producto en Shopify. En modo demo se usan las de `public/fotos/`.
+Las **fotos** del visor salen de las imágenes del producto en Shopify. En modo demo se usan las fotos de costado de `public/cuadros/`.
 
 ## 4. Variantes de marco
 

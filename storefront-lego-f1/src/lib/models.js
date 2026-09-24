@@ -15,6 +15,9 @@ export const MODELS = {
     // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
     poster: '/cuadros/mercedes-4k.webp', // 4K (escalada con IA desde la foto original)
     posterSmall: '/cuadros/mercedes-2k.webp', // versión liviana para celular
+    // Foto real de costado (sin línea de luz interior, con la luz cálida en la pared), 4K
+    sidePhoto: '/cuadros/mercedes-lateral-4k.webp',
+    sidePhotoSmall: '/cuadros/mercedes-lateral-2k.webp',
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.5822,
     match: /(mercedes|amg|w14|petronas)/i,
@@ -40,13 +43,16 @@ export const MODELS = {
       helmet: '#e8e9ea',
       stripes: '#c7ccd1',
     },
-    photos: ['/fotos/mercedes-w14-frente.jpg', '/fotos/mercedes-w14-lateral.jpg'],
+    photos: ['/cuadros/mercedes-lateral-2k.webp'],
   },
   redbull: {
     key: 'redbull',
     // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
     poster: '/cuadros/redbull-4k.webp', // 4K (escalada con IA desde la foto original)
     posterSmall: '/cuadros/redbull-2k.webp', // versión liviana para celular
+    // Foto real de costado (sin línea de luz interior, con la luz cálida en la pared), 4K
+    sidePhoto: '/cuadros/redbull-lateral-4k.webp',
+    sidePhotoSmall: '/cuadros/redbull-lateral-2k.webp',
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.6955,
     match: /(red ?bull|rb-?20|oracle)/i,
@@ -72,13 +78,16 @@ export const MODELS = {
       helmet: '#ffcc00',
       stripes: '#e3261d',
     },
-    photos: ['/fotos/redbull-rb20-frente.jpg', '/fotos/redbull-rb20-lateral.jpg'],
+    photos: ['/cuadros/redbull-lateral-2k.webp'],
   },
   ferrari: {
     key: 'ferrari',
     // Foto real del cuadro, recortada por dentro de la línea de luz y escalada a 4K
     poster: '/cuadros/ferrari-4k.webp', // 4K (escalada con IA desde la foto original)
     posterSmall: '/cuadros/ferrari-2k.webp', // versión liviana para celular
+    // Foto real de costado (sin línea de luz interior, con la luz cálida en la pared), 4K
+    sidePhoto: '/cuadros/ferrari-lateral-4k.webp',
+    sidePhotoSmall: '/cuadros/ferrari-lateral-2k.webp',
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.5802,
     match: /(ferrari|sf-?24|scuderia)/i,
@@ -103,7 +112,7 @@ export const MODELS = {
       helmet: '#d3121a',
       stripes: '#f4f4f4',
     },
-    photos: ['/fotos/ferrari-sf24-frente.jpg'],
+    photos: ['/cuadros/ferrari-lateral-2k.webp'],
   },
 }
 

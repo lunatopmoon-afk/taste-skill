@@ -12,6 +12,12 @@ import {
 } from '@phosphor-icons/react'
 import { formatMoney } from '../lib/shopify.js'
 
+const SMALL_SCREEN =
+  typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
+
+const SIDE_PHOTO_MASK =
+  'linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent)'
+
 const FrameViewer = lazy(() =>
   import('../three/FrameViewer.jsx').then((m) => ({ default: m.FrameViewer })),
 )
@@ -44,6 +50,19 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
   const [photo, setPhoto] = useState(null)
   const [sideView, setSideView] = useState(false)
   const hasPhoto = Boolean(product.model.poster)
+  const sidePhoto = SMALL_SCREEN ? product.model.sidePhotoSmall : product.model.sidePhoto
+  const showSidePhoto = sideView && Boolean(sidePhoto)
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  // Cuando la foto de costado ya tapa el visor, el 3D deja de dibujar (ahorra GPU y batería)
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (!showSidePhoto) {
+      setPaused(false)
+      return
+    }
+    const t = setTimeout(() => setPaused(true), 1400)
+    return () => clearTimeout(t)
+  }, [showSidePhoto])
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
   const optionName = useMemo(() => frameOptionName(product.options), [product.options])
   const finish = optionName
@@ -85,20 +104,61 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
             ledOn={ledOn}
             drsOpen={drsOpen}
             sideView={sideView}
+            paused={paused}
             onToggleOpen={() => !hasPhoto && setOpen((o) => !o)}
           />
         </Suspense>
-        <p className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
+
+        {/* Vista lateral: el cuadro 3D gira y se funde con la foto REAL de costado */}
+        {sidePhoto && (
+          <button
+            type="button"
+            onClick={() => setPhoto(product.model.sidePhoto)}
+            onPointerMove={(e) => {
+              const r = e.currentTarget.getBoundingClientRect()
+              setTilt({
+                x: (e.clientX - r.left) / r.width - 0.5,
+                y: (e.clientY - r.top) / r.height - 0.5,
+              })
+            }}
+            onPointerLeave={() => setTilt({ x: 0, y: 0 })}
+            aria-label="Ampliar la foto de costado"
+            tabIndex={showSidePhoto ? 0 : -1}
+            className={`absolute inset-0 block overflow-hidden bg-[#0b0b0c] transition-opacity ease-out ${
+              showSidePhoto
+                ? 'cursor-zoom-in opacity-100 delay-500 duration-700'
+                : 'pointer-events-none opacity-0 duration-300'
+            }`}
+          >
+            <img
+              src={sidePhoto}
+              alt={`${product.title}, vista de costado`}
+              decoding="async"
+              className="absolute left-1/2 top-1/2 h-full w-auto max-w-none transition-transform duration-500 ease-out"
+              style={{
+                // bordes difuminados para que la foto se funda con el fondo del visor
+                maskImage: SIDE_PHOTO_MASK,
+                WebkitMaskImage: SIDE_PHOTO_MASK,
+                maskComposite: 'intersect',
+                WebkitMaskComposite: 'source-in',
+                transform: `translate(-50%, -50%) perspective(1400px) rotateY(${tilt.x * 5}deg) rotateX(${-tilt.y * 4}deg) scale(1.02)`,
+              }}
+            />
+          </button>
+        )}
+        <p className="pointer-events-none absolute bottom-4 left-4 right-4 z-10 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
           <ArrowsOutCardinal size={14} weight="bold" />
-          {hasPhoto
-            ? 'Arrastra para girar · rueda o pellizca para acercarte'
-            : open
-              ? 'Mueve el cursor: las ruedas delanteras giran contigo'
-              : 'Arrastra para girar · doble clic saca el auto'}
+          {showSidePhoto
+            ? 'Foto real de costado · clic para ampliar'
+            : hasPhoto
+              ? 'Arrastra para girar · rueda o pellizca para acercarte'
+              : open
+                ? 'Mueve el cursor: las ruedas delanteras giran contigo'
+                : 'Arrastra para girar · doble clic saca el auto'}
         </p>
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 grid size-11 place-items-center rounded-full border border-line bg-pit/80 text-chalk backdrop-blur transition hover:border-chalk"
+          className="absolute right-4 top-4 z-10 grid size-11 place-items-center rounded-full border border-line bg-pit/80 text-chalk backdrop-blur transition hover:border-chalk"
           aria-label="Cerrar"
         >
           <X size={18} weight="bold" />

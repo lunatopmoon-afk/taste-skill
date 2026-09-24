@@ -96,11 +96,13 @@ function CameraRig({ total, active }) {
   return null
 }
 
-export function GalleryWall({ products, active, onActiveChange, onSelect }) {
+// paused: el visor de producto está abierto encima, así que la pared deja de dibujar
+export function GalleryWall({ products, active, onActiveChange, onSelect, paused = false }) {
   const wall = useWallTexture()
   return (
     <Canvas
       shadows
+      frameloop={paused ? 'never' : 'always'}
       dpr={[1, 2]}
       camera={{ position: [0, -0.95, 24], fov: 22 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}

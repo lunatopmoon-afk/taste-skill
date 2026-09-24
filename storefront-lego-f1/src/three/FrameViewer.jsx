@@ -30,11 +30,21 @@ function Turntable({ angle, children }) {
 }
 
 // Visor individual del cuadro: girar, vista lateral, LED (y sacar el auto / DRS en modelos 3D).
-export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, onToggleOpen }) {
+export function FrameViewer({
+  product,
+  finish,
+  open,
+  ledOn,
+  drsOpen,
+  sideView,
+  paused = false,
+  onToggleOpen,
+}) {
   const wall = useWallTexture()
   return (
     <Canvas
       shadows
+      frameloop={paused ? 'never' : 'always'}
       dpr={[1, 3]}
       camera={{ position: [1.2, 0.3, 8], fov: 38 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
@@ -55,7 +65,7 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, o
       />
       <Suspense fallback={null}>
         {/* La pared gira con el cuadro: es como caminar hacia un lado */}
-        <Turntable angle={sideView ? -0.5 : 0}>
+        <Turntable angle={sideView ? 0.5 : 0}>
           <mesh position={[0, 0, -0.06]} receiveShadow>
             <planeGeometry args={[30, 20]} />
             <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
