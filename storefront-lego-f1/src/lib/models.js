@@ -6,11 +6,15 @@
 //   2. etiqueta "modelo:mercedes"
 //   3. palabras del título ("W14", "RB-20", "SF-24", "Ferrari"…)
 
+// Todos los cuadros usan la misma retroiluminación cálida (la del Red Bull)
+const WARM_HALO = '#ffbf6e'
+
 export const MODELS = {
   mercedes: {
     key: 'mercedes',
     // Foto real del cuadro, recortada al borde interior del marco
     poster: '/cuadros/mercedes.webp',
+    relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.6399,
     match: /(mercedes|amg|w14|petronas)/i,
     code: 'W14',
@@ -18,9 +22,9 @@ export const MODELS = {
     titleStyle: 'highlight', // "W14" resaltado en el color del LED
     highlight: 'W14',
     blurb:
-      'El W14 negro con detalles turquesa, montado sobre fondo verde petróleo. Marco negro con línea LED turquesa alrededor del póster.',
+      'El W14 negro con detalles turquesa, montado sobre fondo verde petróleo. Marco negro con retroiluminación cálida que baña la pared.',
     backdrop: { center: '#1d8a84', mid: '#0d4a48', edge: '#041615' },
-    led: { border: '#5ff5e6', halo: '#2fd6c6', haloStrength: 0.55 },
+    led: { border: '#5ff5e6', halo: WARM_HALO, haloStrength: 1 },
     tires: '#f2c40c',
     engine: 'mercedes',
     livery: {
@@ -41,6 +45,7 @@ export const MODELS = {
     key: 'redbull',
     // Foto real del cuadro, recortada al borde interior del marco
     poster: '/cuadros/redbull.webp',
+    relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.6955,
     match: /(red ?bull|rb-?20|oracle)/i,
     code: 'RB-20',
@@ -49,7 +54,7 @@ export const MODELS = {
     blurb:
       'El RB-20 azul con morro amarillo y detalles rojos, sobre fondo azul rey. Marco negro con retroiluminación cálida que baña la pared.',
     backdrop: { center: '#2a55e0', mid: '#12308f', edge: '#050b24' },
-    led: { border: null, halo: '#ffbf6e', haloStrength: 1 },
+    led: { border: null, halo: WARM_HALO, haloStrength: 1 },
     tires: '#e3261d',
     engine: 'gearbox',
     livery: {
@@ -71,15 +76,16 @@ export const MODELS = {
     key: 'ferrari',
     // Foto real del cuadro, recortada al borde interior del marco
     poster: '/cuadros/ferrari.webp',
+    relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
     posterAspect: 0.609,
     match: /(ferrari|sf-?24|scuderia)/i,
     code: 'SF-24',
     title: ['Ferrari SF-24', 'Formula One Racing'],
     titleStyle: 'divider', // dos líneas doradas con separador
     blurb:
-      'El SF-24 rojo con alerones negros y blancos, sobre fondo rojo profundo. Marco con línea LED dorada y resplandor ámbar en la pared.',
+      'El SF-24 rojo con alerones negros y blancos, sobre fondo rojo profundo. Marco negro con retroiluminación cálida que baña la pared.',
     backdrop: { center: '#c0170f', mid: '#6d0a07', edge: '#1c0302' },
-    led: { border: '#ffc24d', halo: '#ff8a1f', haloStrength: 0.9 },
+    led: { border: '#ffc24d', halo: WARM_HALO, haloStrength: 1 },
     tires: '#f2c40c',
     engine: null,
     livery: {

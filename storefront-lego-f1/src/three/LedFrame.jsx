@@ -12,7 +12,7 @@ import { LegoF1Car, UNIT, CAR_CENTER_Z } from './LegoF1Car.jsx'
 export const FRAME_W = 3.05 // ancho máximo, para separar los cuadros en la pared
 export const FRAME_H = 4.3
 const BORDER = 0.07
-const DEPTH = 0.22
+const DEPTH = 0.4
 const INNER_W = 2.56 // ancho del póster dibujado (modelos sin foto)
 const INNER_H = FRAME_H - BORDER * 2
 const LED_INSET = 0.075
@@ -36,7 +36,7 @@ export function frameColor(finish = '') {
 
 function seeded(seed) {
   let s = seed
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647)
+  return () => (s = (s * 16807) % 2147483647) / 2147483647
 }
 
 function drawPoster(canvas, model) {
@@ -99,8 +99,10 @@ function drawPoster(canvas, model) {
     ctx.strokeStyle = 'rgba(255,255,255,0.45)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(w / 2 - tw / 2 - 150, y2); ctx.lineTo(w / 2 - tw / 2 - 30, y2)
-    ctx.moveTo(w / 2 + tw / 2 + 30, y2); ctx.lineTo(w / 2 + tw / 2 + 150, y2)
+    ctx.moveTo(w / 2 - tw / 2 - 150, y2)
+    ctx.lineTo(w / 2 - tw / 2 - 30, y2)
+    ctx.moveTo(w / 2 + tw / 2 + 30, y2)
+    ctx.lineTo(w / 2 + tw / 2 + 150, y2)
     ctx.stroke()
   } else {
     const gold = '#f4c86a'
@@ -150,20 +152,51 @@ function usePoster(model) {
   return texture
 }
 
-// Foto real del cuadro. Material sin iluminación: se ve con los colores exactos de la foto.
-function PhotoPoster({ src, width, height, material }) {
-  const texture = useTexture(src)
+// Foto real del cuadro en relieve: la malla se levanta donde está el auto LEGO
+// (mapa de alturas `*-relieve.png`), así las llantas, la carrocería y los alerones
+// sobresalen del fondo. La foto se ve con sus colores reales (emisiva, sin tone mapping)
+// y la luz de la escena sombrea los costados del relieve.
+const RELIEF_DEPTH = 0.3
+const RELIEF_SEGMENTS = 220
+
+function reliefGeometry(width, height, heightImage) {
+  const segX = RELIEF_SEGMENTS
+  const segY = Math.round(RELIEF_SEGMENTS * (height / width))
+  const geo = new THREE.PlaneGeometry(width, height, segX, segY)
+  if (heightImage) {
+    const c = document.createElement('canvas')
+    c.width = heightImage.width
+    c.height = heightImage.height
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    ctx.drawImage(heightImage, 0, 0)
+    const data = ctx.getImageData(0, 0, c.width, c.height).data
+    const pos = geo.attributes.position
+    const uv = geo.attributes.uv
+    for (let i = 0; i < pos.count; i++) {
+      const px = Math.min(c.width - 1, Math.round(uv.getX(i) * (c.width - 1)))
+      const py = Math.min(c.height - 1, Math.round((1 - uv.getY(i)) * (c.height - 1)))
+      pos.setZ(i, (data[(py * c.width + px) * 4] / 255) * RELIEF_DEPTH)
+    }
+    geo.computeVertexNormals()
+  }
+  return geo
+}
+
+function PhotoPoster({ src, relief, width, height, material }) {
+  const [texture, heightMap] = useTexture([src, relief ?? src])
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
     texture.anisotropy = 8
     material.map = texture
+    material.emissiveMap = texture
     material.needsUpdate = true
   }, [texture, material])
-  return (
-    <mesh position={[0, 0, 0.002]} material={material}>
-      <planeGeometry args={[width, height]} />
-    </mesh>
+  const geometry = useMemo(
+    () => reliefGeometry(width, height, relief ? heightMap.image : null),
+    [width, height, relief, heightMap],
   )
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
 }
 
 // Reflejo del vidrio: una franja de brillo que se desliza con el movimiento
@@ -221,7 +254,16 @@ export function LedFrame({
   const innerH = INNER_H
   const innerW = hasPhoto ? INNER_H * model.posterAspect : INNER_W
   const frameW = innerW + BORDER * 2
-  const photoMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
+  const photoMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        toneMapped: false,
+        emissive: '#ffffff',
+        roughness: 0.55,
+        metalness: 0,
+      }),
+    [],
+  )
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
@@ -256,10 +298,17 @@ export function LedFrame({
     if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * k * 0.9
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
-    photoMat.color.setScalar(0.3 + Math.min(k, 1.12) * 0.7)
+    const glow = 0.3 + Math.min(k, 1.12) * 0.7
+    photoMat.emissiveIntensity = glow * 0.8
+    photoMat.color.setScalar(glow * 0.45)
     if (glossMat.current) {
       gloss.offset.x = THREE.MathUtils.damp(gloss.offset.x, -pointer.x * 0.35 + 0.1, 3, dt)
-      glossMat.current.opacity = THREE.MathUtils.damp(glossMat.current.opacity, hovered ? 0.06 : 0.022, 4, dt)
+      glossMat.current.opacity = THREE.MathUtils.damp(
+        glossMat.current.opacity,
+        hovered ? 0.06 : 0.022,
+        4,
+        dt,
+      )
     }
 
     if (!carRig.current) return
@@ -324,7 +373,13 @@ export function LedFrame({
 
       {/* Póster: foto real del cuadro, o póster dibujado si el modelo no tiene foto */}
       {hasPhoto ? (
-        <PhotoPoster src={model.poster} width={innerW} height={innerH} material={photoMat} />
+        <PhotoPoster
+          src={model.poster}
+          relief={model.relief}
+          width={innerW}
+          height={innerH}
+          material={photoMat}
+        />
       ) : (
         <mesh position={[0, 0, 0.002]} receiveShadow>
           <planeGeometry args={[innerW, innerH]} />
@@ -353,7 +408,13 @@ export function LedFrame({
               <boxGeometry args={[w, h, 0.012]} />
             </mesh>
           ))}
-          <pointLight ref={ledLight} position={[0, -0.4, 2.2]} color={model.led.border} distance={4} decay={2} />
+          <pointLight
+            ref={ledLight}
+            position={[0, -0.4, 2.2]}
+            color={model.led.border}
+            distance={4}
+            decay={2}
+          />
         </group>
       )}
 
@@ -362,7 +423,12 @@ export function LedFrame({
         <group ref={carRig} position={[0, CAR_Y, MOUNTED.z]} rotation={[MOUNTED.tilt, 0, 0]}>
           <group ref={carSpin}>
             <group scale={CAR_SCALE} position={[0, 0, -CAR_CENTER_Z * UNIT * CAR_SCALE]}>
-              <LegoF1Car model={model} spinWheels={hovered || open} steer={steer} drsOpen={drsOpen} />
+              <LegoF1Car
+                model={model}
+                spinWheels={hovered || open}
+                steer={steer}
+                drsOpen={drsOpen}
+              />
             </group>
           </group>
         </group>

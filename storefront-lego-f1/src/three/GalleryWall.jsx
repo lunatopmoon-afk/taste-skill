@@ -42,8 +42,9 @@ function HangingFrame({ product, index, total, onSelect, onHover }) {
 
   useFrame(({ pointer }, dt) => {
     const g = ref.current
-    const tx = hovered ? -pointer.y * 0.22 : 0
-    const ty = hovered ? pointer.x * 0.3 : 0
+    // Inclinación suave para que se note el relieve del LEGO, sin perder la fila
+    const tx = hovered ? -pointer.y * 0.14 : 0
+    const ty = hovered ? pointer.x * 0.2 : 0
     g.rotation.x = THREE.MathUtils.damp(g.rotation.x, tx, 4, dt)
     g.rotation.y = THREE.MathUtils.damp(g.rotation.y, ty, 4, dt)
     g.position.z = THREE.MathUtils.damp(g.position.z, hovered ? 0.4 : 0, 4, dt)
@@ -86,10 +87,11 @@ function CameraRig({ total, active }) {
     const dist = Math.max(distW, distH)
     const focusX = carousel ? (active - (total - 1) / 2) * SPACING : 0
 
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, focusX + pointer.x * 0.5, 2.5, dt)
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, -0.6 + pointer.y * 0.3, 2.5, dt)
+    // Cámara de frente y a la altura de los cuadros: todos quedan derechos y en línea
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, focusX + pointer.x * 0.12, 2.5, dt)
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, -0.95 + pointer.y * 0.08, 2.5, dt)
     camera.position.z = THREE.MathUtils.damp(camera.position.z, dist, 2.5, dt)
-    camera.lookAt(focusX, -0.9, 0)
+    camera.lookAt(camera.position.x, camera.position.y, 0)
   })
   return null
 }
@@ -100,7 +102,7 @@ export function GalleryWall({ products, active, onActiveChange, onSelect }) {
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [0, 0, 14], fov: 35 }}
+      camera={{ position: [0, -0.95, 24], fov: 22 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       onPointerMissed={() => (document.body.style.cursor = '')}
     >

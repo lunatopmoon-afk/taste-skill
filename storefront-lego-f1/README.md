@@ -2,13 +2,16 @@
 
 Tienda headless para Shopify (`f1luxuryedtionn.myshopify.com`): cuadros con autos LEGO Technic de Fórmula 1 y luz LED, mostrados en **3D interactivo**.
 
-Dentro de cada cuadro 3D va **la foto real del producto**, recortada al borde interior del marco (`public/cuadros/`). El marco negro, la luz LED, la pared y el movimiento son 3D.
+Dentro de cada cuadro 3D va **la foto real del producto**, recortada al borde interior del marco (`public/cuadros/`).
+El LEGO **sobresale en relieve**: un mapa de alturas (`*-relieve.png`) levanta las llantas, la carrocería y los alerones sobre el fondo.
+Así, al inclinar o girar el cuadro, se ve el auto colgado en 3D.
+Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 
 | Cuadro | Foto | Luz LED en 3D |
 |---|---|---|
-| **Mercedes-AMG F1 W14 E Performance** | `public/cuadros/mercedes.webp` | resplandor turquesa |
+| **Mercedes-AMG F1 W14 E Performance** | `public/cuadros/mercedes.webp` | retroiluminación cálida sobre la pared |
 | **Oracle Red Bull Racing RB-20** | `public/cuadros/redbull.webp` | retroiluminación cálida sobre la pared |
-| **Ferrari SF-24** | `public/cuadros/ferrari.webp` | resplandor ámbar |
+| **Ferrari SF-24** | `public/cuadros/ferrari.webp` | retroiluminación cálida sobre la pared |
 
 **Interacciones**
 - **Al entrar:** los cuadros se encienden uno por uno, con parpadeo de neón y el resplandor en la pared.
@@ -27,6 +30,7 @@ Si agregas un modelo **sin foto**, se muestra un auto LEGO 3D procedural. Ese au
 1. Recorta la foto de frente justo por el borde interior del marco.
 2. Guárdala en `public/cuadros/<modelo>.webp`.
 3. En `src/lib/models.js`, pon en `posterAspect` el ancho ÷ alto de la imagen.
+4. Para el relieve, crea `public/cuadros/<modelo>-relieve.png`: una imagen en escala de grises del mismo encuadre, con el negro como fondo plano y el blanco como la parte que más sobresale (las llantas). Si no existe, la foto se ve plana.
 
 ## 1. Conectar tu tienda
 
