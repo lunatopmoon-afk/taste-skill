@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { LegoF1Car, UNIT, CAR_CENTER_Z } from './LegoF1Car.jsx'
 
-// Cuadro como el de las fotos: marco negro delgado, póster de color con degradado,
-// el auto LEGO montado encima y luz LED (línea interior y/o resplandor en la pared).
+// Cuadro como el de las fotos: marco negro delgado con luz LED.
+// Si el modelo tiene foto (model.poster), dentro del marco va LA FOTO REAL del cuadro,
+// recortada al borde interior. Si no, se dibuja un póster y un auto LEGO procedural.
 // El frente del cuadro mira hacia +Z; el fondo está en z = 0.
 
-export const FRAME_W = 2.7
+export const FRAME_W = 3.05 // ancho máximo, para separar los cuadros en la pared
 export const FRAME_H = 4.3
 const BORDER = 0.07
-const DEPTH = 0.42
-const INNER_W = FRAME_W - BORDER * 2
+const DEPTH = 0.22
+const INNER_W = 2.56 // ancho del póster dibujado (modelos sin foto)
 const INNER_H = FRAME_H - BORDER * 2
 const LED_INSET = 0.075
 const LED_WIDTH = 0.018
@@ -148,6 +150,43 @@ function usePoster(model) {
   return texture
 }
 
+// Foto real del cuadro. Material sin iluminación: se ve con los colores exactos de la foto.
+function PhotoPoster({ src, width, height, material }) {
+  const texture = useTexture(src)
+  useMemo(() => {
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.anisotropy = 8
+    material.map = texture
+    material.needsUpdate = true
+  }, [texture, material])
+  return (
+    <mesh position={[0, 0, 0.002]} material={material}>
+      <planeGeometry args={[width, height]} />
+    </mesh>
+  )
+}
+
+// Reflejo del vidrio: una franja de brillo que se desliza con el movimiento
+let glossTexture
+function getGlossTexture() {
+  if (glossTexture) return glossTexture
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 64
+  const ctx = c.getContext('2d')
+  const g = ctx.createLinearGradient(0, 0, 512, 0)
+  g.addColorStop(0, 'rgba(255,255,255,0)')
+  g.addColorStop(0.42, 'rgba(255,255,255,0)')
+  g.addColorStop(0.5, 'rgba(255,255,255,1)')
+  g.addColorStop(0.58, 'rgba(255,255,255,0)')
+  g.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 512, 64)
+  glossTexture = new THREE.CanvasTexture(c)
+  glossTexture.wrapS = THREE.RepeatWrapping
+  return glossTexture
+}
+
 // Resplandor suave para la retroiluminación en la pared
 let haloTexture
 function getHaloTexture() {
@@ -177,7 +216,14 @@ export function LedFrame({
   ...props
 }) {
   const model = product.model
+  const hasPhoto = Boolean(model.poster)
   const poster = usePoster(model)
+  const innerH = INNER_H
+  const innerW = hasPhoto ? INNER_H * model.posterAspect : INNER_W
+  const frameW = innerW + BORDER * 2
+  const photoMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
+  const gloss = useMemo(getGlossTexture, [])
+  const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
   const carRig = useRef()
   const carSpin = useRef()
@@ -187,10 +233,16 @@ export function LedFrame({
   const level = useRef(0)
   const start = useRef(null)
   const color = frameColor(finish)
-  useEffect(() => () => ledMat.dispose(), [ledMat])
+  useEffect(
+    () => () => {
+      ledMat.dispose()
+      photoMat.dispose()
+    },
+    [ledMat, photoMat],
+  )
   const borderColor = useMemo(() => new THREE.Color(model.led.border ?? '#000000'), [model])
 
-  useFrame(({ clock }, dt) => {
+  useFrame(({ clock, pointer }, dt) => {
     // Encendido con parpadeo tipo neón al entrar a la página
     if (start.current === null) start.current = clock.elapsedTime
     const t = clock.elapsedTime - start.current - introDelay
@@ -203,7 +255,14 @@ export function LedFrame({
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)
     if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * k * 0.9
     if (ledLight.current) ledLight.current.intensity = k * 1.1
+    // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
+    photoMat.color.setScalar(0.3 + Math.min(k, 1.12) * 0.7)
+    if (glossMat.current) {
+      gloss.offset.x = THREE.MathUtils.damp(gloss.offset.x, -pointer.x * 0.35 + 0.1, 3, dt)
+      glossMat.current.opacity = THREE.MathUtils.damp(glossMat.current.opacity, hovered ? 0.06 : 0.022, 4, dt)
+    }
 
+    if (!carRig.current) return
     const rigTarget = open ? PULLED : MOUNTED
     const rig = carRig.current
     rig.position.z = THREE.MathUtils.damp(rig.position.z, rigTarget.z, 3.2, dt)
@@ -218,10 +277,10 @@ export function LedFrame({
   })
 
   const edges = [
-    [FRAME_W, BORDER, 0, FRAME_H / 2 - BORDER / 2],
-    [FRAME_W, BORDER, 0, -FRAME_H / 2 + BORDER / 2],
-    [BORDER, INNER_H, -FRAME_W / 2 + BORDER / 2, 0],
-    [BORDER, INNER_H, FRAME_W / 2 - BORDER / 2, 0],
+    [frameW, BORDER, 0, FRAME_H / 2 - BORDER / 2],
+    [frameW, BORDER, 0, -FRAME_H / 2 + BORDER / 2],
+    [BORDER, innerH, -frameW / 2 + BORDER / 2, 0],
+    [BORDER, innerH, frameW / 2 - BORDER / 2, 0],
   ]
   const ledW = INNER_W - LED_INSET * 2
   const ledH = INNER_H - LED_INSET * 2
@@ -237,7 +296,7 @@ export function LedFrame({
       {/* Retroiluminación sobre la pared */}
       {model.led.halo && (
         <mesh position={[0, 0, -0.035]} renderOrder={-1}>
-          <planeGeometry args={[FRAME_W * 1.75, FRAME_H * 1.5]} />
+          <planeGeometry args={[frameW * 1.75, FRAME_H * 1.5]} />
           <meshBasicMaterial
             ref={haloMat}
             map={halo}
@@ -259,18 +318,35 @@ export function LedFrame({
         </mesh>
       ))}
       <mesh position={[0, 0, -0.015]}>
-        <boxGeometry args={[FRAME_W, FRAME_H, 0.03]} />
+        <boxGeometry args={[frameW, FRAME_H, 0.03]} />
         <meshStandardMaterial color="#070707" />
       </mesh>
 
-      {/* Póster */}
-      <mesh position={[0, 0, 0.002]} receiveShadow>
-        <planeGeometry args={[INNER_W, INNER_H]} />
-        <meshStandardMaterial map={poster} roughness={0.85} />
+      {/* Póster: foto real del cuadro, o póster dibujado si el modelo no tiene foto */}
+      {hasPhoto ? (
+        <PhotoPoster src={model.poster} width={innerW} height={innerH} material={photoMat} />
+      ) : (
+        <mesh position={[0, 0, 0.002]} receiveShadow>
+          <planeGeometry args={[innerW, innerH]} />
+          <meshStandardMaterial map={poster} roughness={0.85} />
+        </mesh>
+      )}
+
+      {/* Vidrio: brillo que se desliza al mover el cursor */}
+      <mesh position={[0, 0, DEPTH - 0.01]}>
+        <planeGeometry args={[innerW, innerH]} />
+        <meshBasicMaterial
+          ref={glossMat}
+          map={gloss}
+          transparent
+          opacity={0.022}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
       </mesh>
 
-      {/* Línea LED interior */}
-      {model.led.border && (
+      {/* Línea LED interior (la foto real ya la trae) */}
+      {!hasPhoto && model.led.border && (
         <group position={[0, 0, 0.012]}>
           {leds.map(([w, h, x, y], i) => (
             <mesh key={i} position={[x, y, 0]} material={ledMat}>
@@ -281,14 +357,16 @@ export function LedFrame({
         </group>
       )}
 
-      {/* Auto: rig = posición e inclinación, spin = giro sobre su eje */}
-      <group ref={carRig} position={[0, CAR_Y, MOUNTED.z]} rotation={[MOUNTED.tilt, 0, 0]}>
-        <group ref={carSpin}>
-          <group scale={CAR_SCALE} position={[0, 0, -CAR_CENTER_Z * UNIT * CAR_SCALE]}>
-            <LegoF1Car model={model} spinWheels={hovered || open} steer={steer} drsOpen={drsOpen} />
+      {/* Auto 3D procedural: solo para modelos sin foto */}
+      {!hasPhoto && (
+        <group ref={carRig} position={[0, CAR_Y, MOUNTED.z]} rotation={[MOUNTED.tilt, 0, 0]}>
+          <group ref={carSpin}>
+            <group scale={CAR_SCALE} position={[0, 0, -CAR_CENTER_Z * UNIT * CAR_SCALE]}>
+              <LegoF1Car model={model} spinWheels={hovered || open} steer={steer} drsOpen={drsOpen} />
+            </group>
           </group>
         </group>
-      </group>
+      )}
     </group>
   )
 }

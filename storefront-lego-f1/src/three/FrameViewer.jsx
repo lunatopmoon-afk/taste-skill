@@ -20,14 +20,23 @@ function SteeringFrame(props) {
   return <LedFrame {...props} steer={steer} />
 }
 
-// Visor individual del cuadro: girar, sacar el auto, LED y DRS.
-export function FrameViewer({ product, finish, open, ledOn, drsOpen, onToggleOpen }) {
+// Gira el cuadro para verlo de lado, como en la foto lateral del producto.
+function Turntable({ angle, children }) {
+  const ref = useRef()
+  useFrame((_, dt) => {
+    ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, angle, 3, dt)
+  })
+  return <group ref={ref}>{children}</group>
+}
+
+// Visor individual del cuadro: girar, vista lateral, LED (y sacar el auto / DRS en modelos 3D).
+export function FrameViewer({ product, finish, open, ledOn, drsOpen, sideView, onToggleOpen }) {
   const wall = useWallTexture()
   return (
     <Canvas
       shadows
       dpr={[1, 2]}
-      camera={{ position: [2.4, 0.4, 8], fov: 38 }}
+      camera={{ position: [1.2, 0.3, 8], fov: 38 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
     >
       <color attach="background" args={['#0b0b0c']} />
@@ -44,26 +53,29 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, onToggleOpe
         shadow-camera-top={4}
         shadow-camera-bottom={-4}
       />
-      <mesh position={[0, 0, -0.06]} receiveShadow>
-        <planeGeometry args={[30, 20]} />
-        <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
-      </mesh>
       <Suspense fallback={null}>
-        <group
-          onDoubleClick={(e) => {
-            e.stopPropagation()
-            onToggleOpen()
-          }}
-        >
-          <SteeringFrame
-            product={product}
-            finish={finish}
-            open={open}
-            hovered={open}
-            ledOn={ledOn}
-            drsOpen={drsOpen}
-          />
-        </group>
+        {/* La pared gira con el cuadro: es como caminar hacia un lado */}
+        <Turntable angle={sideView ? -0.62 : 0}>
+          <mesh position={[0, 0, -0.06]} receiveShadow>
+            <planeGeometry args={[30, 20]} />
+            <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
+          </mesh>
+          <group
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              onToggleOpen()
+            }}
+          >
+            <SteeringFrame
+              product={product}
+              finish={finish}
+              open={open}
+              hovered={open}
+              ledOn={ledOn}
+              drsOpen={drsOpen}
+            />
+          </group>
+        </Turntable>
       </Suspense>
       <OrbitControls
         makeDefault
@@ -78,8 +90,18 @@ export function FrameViewer({ product, finish, open, ledOn, drsOpen, onToggleOpe
       />
       <Environment resolution={256}>
         <Lightformer intensity={2.2} position={[0, 5, 3]} scale={[8, 2, 1]} />
-        <Lightformer intensity={0.9} position={[-5, 1, 2]} rotation-y={Math.PI / 3} scale={[3, 6, 1]} />
-        <Lightformer intensity={0.9} position={[5, 1, 2]} rotation-y={-Math.PI / 3} scale={[3, 6, 1]} />
+        <Lightformer
+          intensity={0.9}
+          position={[-5, 1, 2]}
+          rotation-y={Math.PI / 3}
+          scale={[3, 6, 1]}
+        />
+        <Lightformer
+          intensity={0.9}
+          position={[5, 1, 2]}
+          rotation-y={-Math.PI / 3}
+          scale={[3, 6, 1]}
+        />
       </Environment>
       <EffectComposer multisampling={4}>
         <Bloom mipmapBlur luminanceThreshold={1} intensity={1.1} radius={0.7} />

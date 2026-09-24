@@ -2,26 +2,31 @@
 
 Tienda headless para Shopify (`f1luxuryedtionn.myshopify.com`): cuadros con autos LEGO Technic de Fórmula 1 y luz LED, mostrados en **3D interactivo**.
 
-Los 3 modelos están recreados en 3D a partir de las fotos de producto:
+Dentro de cada cuadro 3D va **la foto real del producto**, recortada al borde interior del marco (`public/cuadros/`). El marco negro, la luz LED, la pared y el movimiento son 3D.
 
-| Cuadro | Fondo | Luz LED | Auto |
-|---|---|---|---|
-| **Mercedes-AMG F1 W14 E Performance** | verde petróleo | línea turquesa alrededor del póster | negro con detalles turquesa, motor V6 bronce a la vista, neumáticos con banda amarilla |
-| **Oracle Red Bull Racing RB-20** | azul rey | retroiluminación cálida sobre la pared | azul con morro amarillo, detalles rojos, alerones negros, neumáticos con banda roja |
-| **Ferrari SF-24** | rojo profundo | línea dorada + resplandor ámbar | rojo con alerón delantero negro y blanco, neumáticos con banda amarilla |
+| Cuadro | Foto | Luz LED en 3D |
+|---|---|---|
+| **Mercedes-AMG F1 W14 E Performance** | `public/cuadros/mercedes.webp` | resplandor turquesa |
+| **Oracle Red Bull Racing RB-20** | `public/cuadros/redbull.webp` | retroiluminación cálida sobre la pared |
+| **Ferrari SF-24** | `public/cuadros/ferrari.webp` | resplandor ámbar |
 
 **Interacciones**
-- **Al entrar:** los LED de cada cuadro se encienden uno por uno, con parpadeo de neón.
-- **Cursor sobre un cuadro:** el cuadro se inclina hacia ti y se acerca, el LED sube de intensidad y las ruedas giran.
-- **Clic:** abre el visor 3D. Ahí puedes arrastrar para girar el cuadro y usar estos botones:
-  - **Sacar el auto del cuadro:** el auto sale y gira frente a ti, y las ruedas delanteras siguen al cursor. También funciona con doble clic.
-  - **Abrir DRS:** el alerón trasero se abre.
+- **Al entrar:** los cuadros se encienden uno por uno, con parpadeo de neón y el resplandor en la pared.
+- **Cursor sobre un cuadro:** el cuadro se inclina hacia ti y se acerca, sube el brillo y un reflejo recorre el vidrio.
+- **Clic:** abre el visor 3D. Ahí puedes girar el cuadro, acercarte con la rueda o pellizcando, y usar:
+  - **Vista lateral:** el cuadro gira como en la foto de costado.
   - **LED encendido/apagado.**
-  - **Fotos reales** del cuadro, para ampliarlas.
+  - **Fotos reales**, para ampliarlas.
 - **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
 - **En el móvil:** un cuadro a la vez, con flechas para pasar de uno a otro.
 
-Todo el 3D es procedural (Three.js), sin archivos de modelos.
+Si agregas un modelo **sin foto**, se muestra un auto LEGO 3D procedural. Ese auto sí se puede sacar del cuadro y tiene DRS.
+
+## Cambiar o agregar la foto de un cuadro
+
+1. Recorta la foto de frente justo por el borde interior del marco.
+2. Guárdala en `public/cuadros/<modelo>.webp`.
+3. En `src/lib/models.js`, pon en `posterAspect` el ancho ÷ alto de la imagen.
 
 ## 1. Conectar tu tienda
 

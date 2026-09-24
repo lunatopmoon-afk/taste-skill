@@ -94,7 +94,7 @@ export default function App() {
               </h1>
               <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-dim">
                 Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Pasa el cursor
-                para acercarlos y haz clic para sacar el auto del cuadro en 3D.
+                para acercarlos y haz clic para verlos en 3D, de frente y de lado.
               </p>
             </div>
 

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
 import {
   ArrowsOutCardinal,
+  CubeFocus,
   Lightbulb,
   LightbulbFilament,
   ShoppingBagOpen,
@@ -41,6 +42,8 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
   const [ledOn, setLedOn] = useState(true)
   const [drsOpen, setDrsOpen] = useState(false)
   const [photo, setPhoto] = useState(null)
+  const [sideView, setSideView] = useState(false)
+  const hasPhoto = Boolean(product.model.poster)
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
   const optionName = useMemo(() => frameOptionName(product.options), [product.options])
   const finish = optionName
@@ -81,14 +84,17 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
             open={open}
             ledOn={ledOn}
             drsOpen={drsOpen}
-            onToggleOpen={() => setOpen((o) => !o)}
+            sideView={sideView}
+            onToggleOpen={() => !hasPhoto && setOpen((o) => !o)}
           />
         </Suspense>
         <p className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
           <ArrowsOutCardinal size={14} weight="bold" />
-          {open
-            ? 'Mueve el cursor: las ruedas delanteras giran contigo'
-            : 'Arrastra para girar · doble clic saca el auto'}
+          {hasPhoto
+            ? 'Arrastra para girar · rueda o pellizca para acercarte'
+            : open
+              ? 'Mueve el cursor: las ruedas delanteras giran contigo'
+              : 'Arrastra para girar · doble clic saca el auto'}
         </p>
         <button
           onClick={onClose}
@@ -118,7 +124,9 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
 
         {photos.length > 0 && (
           <div>
-            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-dim">Fotos reales</p>
+            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-dim">
+              Fotos reales
+            </p>
             <div className="flex gap-2">
               {photos.map((src) => (
                 <button
@@ -160,6 +168,16 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
         <div className="mt-auto grid gap-3">
           <p className="font-mono text-xs uppercase tracking-widest text-dim">Interactúa</p>
           <div className="grid grid-cols-2 gap-2">
+            {hasPhoto && (
+              <Toggle
+                on={sideView}
+                onClick={() => setSideView((v) => !v)}
+                iconOn={<CubeFocus size={18} weight="fill" />}
+                iconOff={<CubeFocus size={18} />}
+                labelOn="Vista de frente"
+                labelOff="Vista lateral"
+              />
+            )}
             <Toggle
               on={ledOn}
               onClick={() => setLedOn((v) => !v)}
@@ -168,23 +186,27 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
               labelOn="LED encendido"
               labelOff="LED apagado"
             />
-            <Toggle
-              on={drsOpen}
-              onClick={() => setDrsOpen((v) => !v)}
-              iconOn={<Wind size={18} weight="bold" />}
-              iconOff={<Wind size={18} />}
-              labelOn="DRS abierto"
-              labelOff="Abrir DRS"
-            />
+            {!hasPhoto && (
+              <Toggle
+                on={drsOpen}
+                onClick={() => setDrsOpen((v) => !v)}
+                iconOn={<Wind size={18} weight="bold" />}
+                iconOff={<Wind size={18} />}
+                labelOn="DRS abierto"
+                labelOff="Abrir DRS"
+              />
+            )}
           </div>
-          <Toggle
-            on={open}
-            onClick={() => setOpen((o) => !o)}
-            iconOn={<SteeringWheel size={18} weight="fill" />}
-            iconOff={<SteeringWheel size={18} />}
-            labelOn="Colgar el auto de nuevo"
-            labelOff="Sacar el auto del cuadro"
-          />
+          {!hasPhoto && (
+            <Toggle
+              on={open}
+              onClick={() => setOpen((o) => !o)}
+              iconOn={<SteeringWheel size={18} weight="fill" />}
+              iconOff={<SteeringWheel size={18} />}
+              labelOn="Colgar el auto de nuevo"
+              labelOff="Sacar el auto del cuadro"
+            />
+          )}
           <button
             onClick={() => onAdd(product, variant)}
             disabled={busy || !variant?.availableForSale}
@@ -202,7 +224,11 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
           onClick={() => setPhoto(null)}
           aria-label="Cerrar foto"
         >
-          <img src={photo} alt={product.title} className="max-h-full max-w-full rounded-lg object-contain" />
+          <img
+            src={photo}
+            alt={product.title}
+            className="max-h-full max-w-full rounded-lg object-contain"
+          />
         </button>
       )}
     </motion.div>

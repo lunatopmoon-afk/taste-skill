@@ -9,6 +9,9 @@
 export const MODELS = {
   mercedes: {
     key: 'mercedes',
+    // Foto real del cuadro, recortada al borde interior del marco
+    poster: '/cuadros/mercedes.webp',
+    posterAspect: 0.6399,
     match: /(mercedes|amg|w14|petronas)/i,
     code: 'W14',
     title: ['Mercedes-AMG', 'F1 W14 E Performance'],
@@ -36,6 +39,9 @@ export const MODELS = {
   },
   redbull: {
     key: 'redbull',
+    // Foto real del cuadro, recortada al borde interior del marco
+    poster: '/cuadros/redbull.webp',
+    posterAspect: 0.6955,
     match: /(red ?bull|rb-?20|oracle)/i,
     code: 'RB-20',
     title: ['ORACLE Red Bull RACING', 'RB-20'],
@@ -63,6 +69,9 @@ export const MODELS = {
   },
   ferrari: {
     key: 'ferrari',
+    // Foto real del cuadro, recortada al borde interior del marco
+    poster: '/cuadros/ferrari.webp',
+    posterAspect: 0.609,
     match: /(ferrari|sf-?24|scuderia)/i,
     code: 'SF-24',
     title: ['Ferrari SF-24', 'Formula One Racing'],
