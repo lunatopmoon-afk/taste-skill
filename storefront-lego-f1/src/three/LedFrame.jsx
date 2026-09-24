@@ -414,17 +414,37 @@ function getGlossTexture() {
   return glossTexture
 }
 
-// Resplandor suave para la retroiluminación en la pared
+// Resplandor suave para la retroiluminación en la pared.
+// Se calcula píxel por píxel (sin ctx.filter, que Safari/iPhone/iPad no soportan):
+// brillo máximo pegado al borde del cuadro y se apaga suavemente hacia afuera.
 let haloTexture
 function getHaloTexture() {
   if (haloTexture) return haloTexture
+  const W = 256
+  const H = 320
   const c = document.createElement('canvas')
-  c.width = 512
-  c.height = 640
+  c.width = W
+  c.height = H
   const ctx = c.getContext('2d')
-  ctx.filter = 'blur(38px)'
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(110, 110, 292, 420)
+  const img = ctx.createImageData(W, H)
+  // El plano del halo mide 1.75× el ancho y 1.5× el alto del cuadro
+  const halfW = W / 1.75 / 2
+  const halfH = H / 1.5 / 2
+  const reach = W * 0.11
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = Math.max(Math.abs(x + 0.5 - W / 2) - halfW, 0)
+      const dy = Math.max(Math.abs(y + 0.5 - H / 2) - halfH, 0)
+      const d = Math.hypot(dx, dy) / reach
+      // se desvanece del todo antes de llegar al borde del plano (sin cortes rectos)
+      const edge = Math.min(x, W - 1 - x, y, H - 1 - y) / (W * 0.12)
+      const a = Math.exp(-d * d * 1.6) * Math.min(1, edge) * 0.85
+      const i = (y * W + x) * 4
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
+      img.data[i + 3] = Math.round(a * 255)
+    }
+  }
+  ctx.putImageData(img, 0, 0)
   haloTexture = new THREE.CanvasTexture(c)
   return haloTexture
 }
@@ -440,6 +460,7 @@ export function LedFrame({
   drsOpen = false,
   steer = 0,
   introDelay = 0,
+  powered = true,
   ...props
 }) {
   const model = product.model
@@ -506,8 +527,10 @@ export function LedFrame({
   useFrame(({ clock, pointer }, dt) => {
     // Encendido al entrar: la luz cálida se prende con un destello en el instante en
     // que el cuadro cae en su lugar, y luego se asienta en su brillo normal
-    if (start.current === null) start.current = clock.elapsedTime
-    const t = clock.elapsedTime - start.current - introDelay
+    // `powered` lo da la pared cuando el cuadro realmente cae: la cuenta arranca ahí
+    if (!powered) start.current = null
+    else if (start.current === null) start.current = clock.elapsedTime
+    const t = powered ? clock.elapsedTime - start.current - introDelay : -1
     const target = ledOn ? (hovered ? 1.3 : 1) : 0
     if (t < 0) level.current = 0
     else if (t < 0.09 && ledOn) level.current = 2.1
