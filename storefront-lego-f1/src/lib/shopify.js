@@ -3,6 +3,7 @@
 // llegar al navegador: da control total de la tienda.
 
 import { DEMO_PRODUCTS } from './demoProducts.js'
+import { resolveModel } from './models.js'
 
 const DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN
 const TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
@@ -32,9 +33,10 @@ const PRODUCT_FIELDS = `
   description
   tags
   featuredImage { url altText }
+  images(first: 6) { nodes { url altText } }
   priceRange { minVariantPrice { amount currencyCode } }
   options { name values }
-  livery: metafield(namespace: "custom", key: "livery") { value }
+  modelo: metafield(namespace: "custom", key: "modelo") { value }
   variants(first: 20) {
     nodes {
       id
@@ -46,19 +48,6 @@ const PRODUCT_FIELDS = `
   }
 `
 
-// Colores del auto: metafield custom.livery = "#FF8000,#1E1E1E,#47C7FC"
-// o una etiqueta del producto: "livery:#FF8000,#1E1E1E,#47C7FC".
-function parseLivery(product, index) {
-  const raw =
-    product.livery?.value ||
-    product.tags?.find((t) => t.toLowerCase().startsWith('livery:'))?.slice(7)
-  const colors = raw?.split(',').map((c) => c.trim()).filter(Boolean)
-  if (colors?.length >= 2) {
-    return { primary: colors[0], secondary: colors[1], accent: colors[2] || colors[1] }
-  }
-  return DEMO_PRODUCTS[index % DEMO_PRODUCTS.length].livery
-}
-
 function normalize(product, index) {
   return {
     id: product.id,
@@ -66,23 +55,25 @@ function normalize(product, index) {
     title: product.title,
     description: product.description,
     image: product.featuredImage?.url || null,
+    images: product.images.nodes.map((i) => i.url),
     price: product.priceRange.minVariantPrice,
     options: product.options,
     variants: product.variants.nodes,
-    livery: parseLivery(product, index),
+    model: resolveModel(product, index),
     number: String(index + 1).padStart(2, '0'),
   }
 }
 
-export async function fetchProducts() {
-  if (!isShopifyConfigured) return DEMO_PRODUCTS
+export async function fetchCatalog() {
+  if (!isShopifyConfigured) return { shopName: null, products: DEMO_PRODUCTS }
   const data = await storefront(`
     query Products {
+      shop { name }
       products(first: 12, sortKey: BEST_SELLING) { nodes { ${PRODUCT_FIELDS} } }
     }
   `)
   const products = data.products.nodes.map(normalize)
-  return products.length ? products : DEMO_PRODUCTS
+  return { shopName: data.shop.name, products: products.length ? products : DEMO_PRODUCTS }
 }
 
 // ---------- Carrito ----------
@@ -147,6 +138,7 @@ export async function fetchCart(cartId) {
 }
 
 export function formatMoney({ amount, currencyCode }) {
+  if (!Number(amount)) return 'Consultar'
   return new Intl.NumberFormat('es', { style: 'currency', currency: currencyCode }).format(
     Number(amount),
   )

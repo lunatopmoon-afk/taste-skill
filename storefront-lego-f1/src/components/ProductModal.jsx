@@ -1,6 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { ArrowsOutCardinal, Door, DoorOpen, ShoppingBagOpen, X } from '@phosphor-icons/react'
+import {
+  ArrowsOutCardinal,
+  Lightbulb,
+  LightbulbFilament,
+  ShoppingBagOpen,
+  SteeringWheel,
+  Wind,
+  X,
+} from '@phosphor-icons/react'
 import { formatMoney } from '../lib/shopify.js'
 
 const FrameViewer = lazy(() =>
@@ -12,28 +20,52 @@ function frameOptionName(options) {
   return options.find((o) => /(marco|frame|acabado|finish|color)/i.test(o.name))?.name
 }
 
+function Toggle({ on, onClick, iconOn, iconOff, labelOn, labelOff }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      className={`flex items-center justify-center gap-2 rounded-full border px-4 py-3 text-sm font-medium transition active:scale-[0.98] ${
+        on ? 'border-chalk bg-chalk text-asphalt' : 'border-line text-chalk hover:border-chalk'
+      }`}
+    >
+      {on ? iconOn : iconOff}
+      {on ? labelOn : labelOff}
+    </button>
+  )
+}
+
 export function ProductModal({ product, onClose, onAdd, busy }) {
   const [variantId, setVariantId] = useState(product.variants[0]?.id)
   const [open, setOpen] = useState(false)
+  const [ledOn, setLedOn] = useState(true)
+  const [drsOpen, setDrsOpen] = useState(false)
+  const [photo, setPhoto] = useState(null)
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0]
   const optionName = useMemo(() => frameOptionName(product.options), [product.options])
   const finish = optionName
     ? variant?.selectedOptions.find((o) => o.name === optionName)?.value
-    : variant?.title
+    : undefined
+  const showVariants = product.variants.length > 1
+  const photos = product.images?.length ? product.images : product.model.photos
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose()
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      if (photo) setPhoto(null)
+      else onClose()
+    }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [onClose, photo])
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 grid bg-asphalt lg:grid-cols-[1fr_420px]"
+      className="fixed inset-0 z-50 grid bg-asphalt lg:grid-cols-[1fr_440px]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -47,12 +79,16 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
             product={product}
             finish={finish}
             open={open}
+            ledOn={ledOn}
+            drsOpen={drsOpen}
             onToggleOpen={() => setOpen((o) => !o)}
           />
         </Suspense>
-        <p className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
+        <p className="pointer-events-none absolute bottom-4 left-4 right-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-dim">
           <ArrowsOutCardinal size={14} weight="bold" />
-          Arrastra para girar · doble clic abre la vitrina
+          {open
+            ? 'Mueve el cursor: las ruedas delanteras giran contigo'
+            : 'Arrastra para girar · doble clic saca el auto'}
         </p>
         <button
           onClick={onClose}
@@ -63,20 +99,41 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
         </button>
       </div>
 
-      <aside className="flex flex-col gap-8 overflow-y-auto border-line bg-pit px-6 py-8 lg:border-l lg:px-10 lg:py-14">
+      <aside className="flex flex-col gap-7 overflow-y-auto border-line bg-pit px-6 py-8 lg:border-l lg:px-10 lg:py-12">
         <div>
-          <p className="font-mono text-xs uppercase tracking-widest text-dim">N.º {product.number}</p>
-          <h2 className="mt-2 text-4xl font-semibold tracking-tighter">{product.title}</h2>
+          <p className="font-mono text-xs uppercase tracking-widest text-dim">
+            N.º {product.number} · {product.model.code}
+          </p>
+          <h2 className="mt-2 text-3xl font-semibold leading-[1.05] tracking-tighter md:text-4xl">
+            {product.title}
+          </h2>
           <p className="mt-3 font-mono text-xl text-signal">
             {formatMoney(variant?.price ?? product.price)}
           </p>
         </div>
 
-        {product.description && (
-          <p className="max-w-[60ch] text-[15px] leading-relaxed text-dim">{product.description}</p>
+        <p className="max-w-[60ch] text-[15px] leading-relaxed text-dim">
+          {product.description || product.model.blurb}
+        </p>
+
+        {photos.length > 0 && (
+          <div>
+            <p className="mb-3 font-mono text-xs uppercase tracking-widest text-dim">Fotos reales</p>
+            <div className="flex gap-2">
+              {photos.map((src) => (
+                <button
+                  key={src}
+                  onClick={() => setPhoto(src)}
+                  className="aspect-[4/5] w-20 overflow-hidden rounded-lg border border-line transition hover:border-chalk"
+                >
+                  <img src={src} alt="" loading="lazy" className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
-        {product.variants.length > 1 && (
+        {showVariants && (
           <fieldset>
             <legend className="mb-3 font-mono text-xs uppercase tracking-widest text-dim">
               {optionName ?? 'Opción'}
@@ -101,23 +158,53 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
         )}
 
         <div className="mt-auto grid gap-3">
-          <button
+          <p className="font-mono text-xs uppercase tracking-widest text-dim">Interactúa</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Toggle
+              on={ledOn}
+              onClick={() => setLedOn((v) => !v)}
+              iconOn={<LightbulbFilament size={18} weight="fill" />}
+              iconOff={<Lightbulb size={18} />}
+              labelOn="LED encendido"
+              labelOff="LED apagado"
+            />
+            <Toggle
+              on={drsOpen}
+              onClick={() => setDrsOpen((v) => !v)}
+              iconOn={<Wind size={18} weight="bold" />}
+              iconOff={<Wind size={18} />}
+              labelOn="DRS abierto"
+              labelOff="Abrir DRS"
+            />
+          </div>
+          <Toggle
+            on={open}
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center justify-center gap-2 rounded-full border border-line px-6 py-4 text-sm font-medium transition hover:border-chalk active:scale-[0.98]"
-          >
-            {open ? <Door size={18} /> : <DoorOpen size={18} />}
-            {open ? 'Colgar el auto de nuevo' : 'Abrir vitrina y sacar el auto'}
-          </button>
+            iconOn={<SteeringWheel size={18} weight="fill" />}
+            iconOff={<SteeringWheel size={18} />}
+            labelOn="Colgar el auto de nuevo"
+            labelOff="Sacar el auto del cuadro"
+          />
           <button
             onClick={() => onAdd(product, variant)}
             disabled={busy || !variant?.availableForSale}
-            className="flex items-center justify-center gap-2 rounded-full bg-signal px-6 py-4 text-sm font-semibold text-asphalt transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+            className="mt-2 flex items-center justify-center gap-2 rounded-full bg-signal px-6 py-4 text-sm font-semibold text-asphalt transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
           >
             <ShoppingBagOpen size={18} weight="bold" />
             {variant?.availableForSale ? 'Agregar al carrito' : 'Agotado'}
           </button>
         </div>
       </aside>
+
+      {photo && (
+        <button
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/90 p-6"
+          onClick={() => setPhoto(null)}
+          aria-label="Cerrar foto"
+        >
+          <img src={photo} alt={product.title} className="max-h-full max-w-full rounded-lg object-contain" />
+        </button>
+      )}
     </motion.div>
   )
 }

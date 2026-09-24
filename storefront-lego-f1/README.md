@@ -1,13 +1,27 @@
-# Pit/Wall: storefront headless de cuadros LEGO F1
+# F1 Luxury Edition: storefront headless
 
-Tienda headless para Shopify: cuadros de exhibición (caja de sombra) con autos LEGO de Fórmula 1 colgados, mostrados en **3D interactivo**.
+Tienda headless para Shopify (`f1luxuryedtionn.myshopify.com`): cuadros con autos LEGO Technic de Fórmula 1 y luz LED, mostrados en **3D interactivo**.
 
-- **Pared de galería 3D:** los cuadros cuelgan con luz de museo. Al pasar el cursor, el cuadro se inclina hacia ti y las ruedas giran.
-- **Visor del producto:** puedes girar el cuadro, **abrir la vitrina y sacar el auto**, que da vueltas frente a ti. Al elegir el marco (Negro, Nogal, Blanco…), el color cambia en 3D.
-- **Carrito y pago** con la Storefront API. El botón "Ir a pagar" lleva al checkout oficial de Shopify.
-- En el móvil, los cuadros se ven uno por uno, con flechas para pasar de uno a otro.
+Los 3 modelos están recreados en 3D a partir de las fotos de producto:
 
-Todo el 3D es procedural (Three.js). No hace falta modelar nada: los colores de cada auto salen de Shopify.
+| Cuadro | Fondo | Luz LED | Auto |
+|---|---|---|---|
+| **Mercedes-AMG F1 W14 E Performance** | verde petróleo | línea turquesa alrededor del póster | negro con detalles turquesa, motor V6 bronce a la vista, neumáticos con banda amarilla |
+| **Oracle Red Bull Racing RB-20** | azul rey | retroiluminación cálida sobre la pared | azul con morro amarillo, detalles rojos, alerones negros, neumáticos con banda roja |
+| **Ferrari SF-24** | rojo profundo | línea dorada + resplandor ámbar | rojo con alerón delantero negro y blanco, neumáticos con banda amarilla |
+
+**Interacciones**
+- **Al entrar:** los LED de cada cuadro se encienden uno por uno, con parpadeo de neón.
+- **Cursor sobre un cuadro:** el cuadro se inclina hacia ti y se acerca, el LED sube de intensidad y las ruedas giran.
+- **Clic:** abre el visor 3D. Ahí puedes arrastrar para girar el cuadro y usar estos botones:
+  - **Sacar el auto del cuadro:** el auto sale y gira frente a ti, y las ruedas delanteras siguen al cursor. También funciona con doble clic.
+  - **Abrir DRS:** el alerón trasero se abre.
+  - **LED encendido/apagado.**
+  - **Fotos reales** del cuadro, para ampliarlas.
+- **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
+- **En el móvil:** un cuadro a la vez, con flechas para pasar de uno a otro.
+
+Todo el 3D es procedural (Three.js), sin archivos de modelos.
 
 ## 1. Conectar tu tienda
 
@@ -39,15 +53,16 @@ npm run build    # genera /dist para publicar
 
 `dist/` se puede publicar en Vercel, Netlify o Cloudflare Pages. Es una web estática, sin servidor.
 
-## 3. Colores de cada auto (desde Shopify)
+## 3. Qué modelo 3D usa cada producto
 
-Cada producto define los colores de su auto LEGO de una de estas dos formas:
+La web reconoce el modelo por el **título** del producto: "W14"/"Mercedes", "RB-20"/"Red Bull" o "SF-24"/"Ferrari".
+Si quieres fijarlo a mano, usa uno de estos:
 
-1. **Metafield** (recomendado): en *Configuración → Datos personalizados → Productos*, crea `custom.livery` (texto de una línea), exponlo a la **Storefront API** y ponle un valor como
-   `#FF8000,#232326,#47C7FC` (principal, secundario, detalles).
-2. **Etiqueta** del producto: `livery:#FF8000,#232326,#47C7FC`
+1. **Metafield** `custom.modelo` (texto de una línea, expuesto a la Storefront API) con el valor `mercedes`, `redbull` o `ferrari`.
+2. **Etiqueta** del producto: `modelo:mercedes`, `modelo:redbull` o `modelo:ferrari`.
 
-Si un producto no tiene ninguna de las dos, usa una paleta de muestra.
+Los colores, el fondo y el LED de cada modelo están en `src/lib/models.js`.
+Las **fotos** del visor salen de las imágenes del producto en Shopify. En modo demo se usan las de `public/fotos/`.
 
 ## 4. Variantes de marco
 
@@ -57,13 +72,16 @@ Si el producto tiene una opción llamada **Marco**, **Frame**, **Acabado** o **C
 |---|---|
 | negro / cualquier otro | negro mate |
 | nogal / walnut / madera | nogal |
-| roble / oak / natural | roble claro |
+| dorado / gold | dorado |
 | blanco / white | blanco |
 | plata / aluminio | aluminio |
 
-## 5. Agregar un cuarto (o quinto) cuadro
+## 5. Agregar un cuarto cuadro
 
-Solo créalo en Shopify, con su `custom.livery`. La pared 3D acomoda los productos que haya (carga hasta 12, por los más vendidos).
+1. Créalo en Shopify.
+2. Agrega su ficha en `src/lib/models.js`: copia uno de los modelos y cambia los colores, el fondo y el LED.
+
+La pared 3D acomoda sola los productos que haya.
 
 ## Estructura
 
@@ -72,11 +90,12 @@ src/
   lib/shopify.js        Cliente Storefront API (productos + carrito)
   lib/useCart.js        Estado del carrito (Shopify o demo)
   lib/demoProducts.js   Catálogo de muestra
-  three/LegoF1Car.jsx   Auto F1 hecho con piezas y studs tipo LEGO
-  three/ShadowBox.jsx   Cuadro: marco, fondo impreso, soportes, vidrio con bisagra
+  lib/models.js         Ficha de cada modelo (colores, fondo, LED, fotos)
+  three/LegoF1Car.jsx   Auto F1 estilo LEGO Technic (alerones, DRS, suspensión, ruedas)
+  three/LedFrame.jsx    Cuadro: marco negro, póster, línea LED y retroiluminación
   three/GalleryWall.jsx Pared de galería del inicio
   three/FrameViewer.jsx Visor 3D del producto
   components/           Modal del producto y carrito
 ```
 
-LEGO® es una marca de LEGO Group, que no patrocina ni respalda esta tienda.
+LEGO®, Technic y las marcas de los equipos de F1 pertenecen a sus respectivos dueños.

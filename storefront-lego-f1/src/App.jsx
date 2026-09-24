@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Cube, ShoppingBag } from '@phosphor-icons/react'
-import { fetchProducts, formatMoney, isShopifyConfigured } from './lib/shopify.js'
+import { fetchCatalog, formatMoney, isShopifyConfigured } from './lib/shopify.js'
 import { DEMO_PRODUCTS } from './lib/demoProducts.js'
 import { useCart } from './lib/useCart.js'
 import { ProductModal } from './components/ProductModal.jsx'
@@ -13,14 +13,15 @@ const GalleryWall = lazy(() =>
 
 // Ajusta estos textos a las características reales de tus cuadros.
 const SPECS = [
-  ['Caja de sombra', 'Marco profundo con vidrio frontal: el auto queda protegido del polvo y se ve en relieve.'],
-  ['Montaje flotante', 'Soportes transparentes que separan el auto del fondo para que proyecte su propia sombra.'],
-  ['Fondo impreso', 'Cada cuadro lleva el trazado del circuito, el número del auto y una placa con su nombre.'],
-  ['Listo para colgar', 'Llega armado, con herrajes incluidos. Solo necesitas un clavo y una pared.'],
+  ['Auto LEGO Technic armado', 'El modelo completo, armado pieza por pieza y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.'],
+  ['Luz LED', 'Línea de luz alrededor del póster o retroiluminación que baña la pared, según el modelo.'],
+  ['Fondo del equipo', 'Póster con el color de la escudería y el nombre del auto al pie.'],
+  ['Marco negro', 'Perfil delgado negro mate para que todo el protagonismo sea del auto.'],
 ]
 
 export default function App() {
   const [products, setProducts] = useState(DEMO_PRODUCTS)
+  const [shopName, setShopName] = useState('F1 Luxury Edition')
   const [loadError, setLoadError] = useState(null)
   const [active, setActive] = useState(0)
   const [selected, setSelected] = useState(null)
@@ -28,8 +29,11 @@ export default function App() {
   const { cart, busy, error, add, setQuantity } = useCart()
 
   useEffect(() => {
-    fetchProducts()
-      .then(setProducts)
+    fetchCatalog()
+      .then(({ shopName: name, products: list }) => {
+        setProducts(list)
+        if (name) setShopName(name)
+      })
       .catch((e) => setLoadError(e.message))
   }, [])
 
@@ -49,7 +53,7 @@ export default function App() {
     <div className="min-h-[100dvh]">
       <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between px-5 py-4 md:px-10">
         <a href="#" className="font-mono text-sm font-medium uppercase tracking-[0.3em]">
-          Pit<span className="text-signal">/</span>Wall
+          {shopName}
         </a>
         <nav className="flex items-center gap-6 text-sm">
           <a href="#coleccion" className="hidden text-dim transition hover:text-chalk sm:block">Colección</a>
@@ -86,11 +90,11 @@ export default function App() {
           <div className="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="max-w-[16ch] text-4xl font-semibold leading-[1.02] tracking-tighter md:text-6xl">
-                La pista, colgada en tu pared.
+                Tu F1 favorito, colgado en tu pared.
               </h1>
               <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-dim">
-                Autos LEGO de Fórmula 1 montados en cuadros de exhibición. Pasa el cursor para
-                inclinarlos, haz clic para abrir la vitrina y sacar el auto en 3D.
+                Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Pasa el cursor
+                para acercarlos y haz clic para sacar el auto del cuadro en 3D.
               </p>
             </div>
 
@@ -113,7 +117,7 @@ export default function App() {
                       className="flex w-full items-center gap-3 px-4 py-3 text-left"
                     >
                       <span className={i === active ? 'text-signal' : 'text-dim'}>P{i + 1}</span>
-                      <span className="size-2.5 rounded-sm" style={{ background: p.livery.primary }} />
+                      <span className="size-2.5 rounded-sm" style={{ background: p.model.backdrop.center, boxShadow: `0 0 8px ${p.model.led.halo ?? p.model.led.border}` }} />
                       <span className="flex-1 truncate uppercase tracking-wider">{p.title}</span>
                       <span className="text-dim">{formatMoney(p.price)}</span>
                     </button>
@@ -158,7 +162,7 @@ export default function App() {
                 <span className="font-mono text-sm text-dim">{p.number}</span>
                 <div
                   className="hidden aspect-[4/5] w-full overflow-hidden rounded-lg border border-line md:block"
-                  style={{ background: `linear-gradient(160deg, ${p.livery.primary}, #111 70%)` }}
+                  style={{ background: `radial-gradient(circle at 50% 40%, ${p.model.backdrop.center}, ${p.model.backdrop.edge})` }}
                 >
                   {p.image && (
                     <img src={p.image} alt={p.title} loading="lazy" className="size-full object-cover" />
@@ -210,8 +214,10 @@ export default function App() {
       </section>
 
       <footer className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-5 py-10 font-mono text-xs text-dim md:px-10">
-        <span>© {new Date().getFullYear()} Pit/Wall</span>
-        <span>LEGO® es una marca de LEGO Group, que no patrocina ni respalda esta tienda.</span>
+        <span>© {new Date().getFullYear()} {shopName}</span>
+        <span className="max-w-[70ch]">
+          LEGO®, Technic y las marcas de los equipos de F1 pertenecen a sus respectivos dueños.
+        </span>
       </footer>
 
       <AnimatePresence>
