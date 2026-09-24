@@ -77,7 +77,7 @@ export function CartDrawer({ cart, busy, error, onClose, onQuantity }) {
             <a
               href={cart?.checkoutUrl ?? undefined}
               aria-disabled={!lines.length}
-              className={`rounded-full bg-signal px-6 py-4 text-center text-sm font-semibold text-asphalt transition hover:brightness-110 ${
+              className={`rounded-full btn-gold px-6 py-4 text-center text-sm font-semibold ${
                 lines.length ? '' : 'pointer-events-none opacity-40'
               }`}
             >

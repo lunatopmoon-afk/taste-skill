@@ -93,10 +93,8 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
     drop.current.rotation.z = st.rz
 
     const g = ref.current
-    // Inclinación suave para que se note el relieve del LEGO, sin perder la fila
-    const tx = hovered ? -pointer.y * 0.14 : 0
-    const ty = hovered ? pointer.x * 0.2 : 0
-    g.rotation.x = THREE.MathUtils.damp(g.rotation.x, tx, 4, dt)
+        // Al pasar el cursor el cuadro gira solo de izquierda a derecha, para ver las llantas
+    const ty = hovered ? pointer.x * 0.28 : 0
     g.rotation.y = THREE.MathUtils.damp(g.rotation.y, ty, 4, dt)
     g.position.z = THREE.MathUtils.damp(g.position.z, hovered ? 0.4 : 0, 4, dt)
   })
@@ -126,7 +124,7 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
             <LedFrame
               product={product}
               hovered={hovered}
-              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : startAt + FALL_TIME + 0.35}
+              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : startAt + FALL_TIME}
             />
           </group>
         </group>
@@ -193,7 +191,7 @@ export function GalleryWall({ products, onActiveChange, onSelect, paused = false
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       onPointerMissed={() => (document.body.style.cursor = '')}
     >
-      <color attach="background" args={['#0b0b0c']} />
+      <color attach="background" args={['#060607']} />
       <ambientLight intensity={0.18} />
       {/* Luz principal desde arriba a la izquierda: proyecta la sombra del auto sobre el póster */}
       <directionalLight
@@ -211,7 +209,7 @@ export function GalleryWall({ products, onActiveChange, onSelect, paused = false
 
       <mesh position={[0, 0, -0.06]} receiveShadow>
         <planeGeometry args={[70, 40]} />
-        <meshStandardMaterial color="#1a1a1c" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
+        <meshStandardMaterial color="#141416" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
       </mesh>
 
       <Frames products={products} onActiveChange={onActiveChange} onSelect={onSelect} />

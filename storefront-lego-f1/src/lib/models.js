@@ -19,6 +19,13 @@ export const MODELS = {
     sidePhoto: '/cuadros/mercedes-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/mercedes-lateral-2k.webp',
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
+    wheels: [
+      [0.2665, 0.234, 0.124, 0.112],
+      [0.7345, 0.234, 0.12, 0.112],
+      [0.2659, 0.7622, 0.1326, 0.1064],
+      [0.7324, 0.7622, 0.1292, 0.1064],
+    ],
     posterAspect: 0.5822,
     match: /(mercedes|amg|w14|petronas)/i,
     code: 'W14',
@@ -54,6 +61,13 @@ export const MODELS = {
     sidePhoto: '/cuadros/redbull-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/redbull-lateral-2k.webp',
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
+    wheels: [
+      [0.3048, 0.2422, 0.1067, 0.1055],
+      [0.7022, 0.2422, 0.1039, 0.1055],
+      [0.3048, 0.7598, 0.0983, 0.1113],
+      [0.7044, 0.7598, 0.1081, 0.1113],
+    ],
     posterAspect: 0.6955,
     match: /(red ?bull|rb-?20|oracle)/i,
     code: 'RB-20',
@@ -89,6 +103,13 @@ export const MODELS = {
     sidePhoto: '/cuadros/ferrari-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/ferrari-lateral-2k.webp',
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
+    wheels: [
+      [0.2761, 0.2104, 0.1313, 0.126],
+      [0.7382, 0.2114, 0.1263, 0.1279],
+      [0.2736, 0.7607, 0.1364, 0.1289],
+      [0.734, 0.7607, 0.138, 0.1289],
+    ],
     posterAspect: 0.5802,
     match: /(ferrari|sf-?24|scuderia)/i,
     code: 'SF-24',

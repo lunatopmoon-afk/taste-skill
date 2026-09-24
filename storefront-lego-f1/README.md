@@ -7,6 +7,7 @@ Se recortó por dentro de la línea de luz: así los tres cuadros quedan simples
 Después se escaló ×4 con Real-ESRGAN (IA) hasta **4K (4096 px de alto)**. En celular se carga la versión 2K.
 El LEGO **sobresale en relieve**: un mapa de alturas (`*-relieve.png`) levanta las llantas, la carrocería y los alerones sobre el fondo.
 Así, al inclinar o girar el cuadro, se ve el auto colgado en 3D.
+Las **llantas son cilindros 3D reales** (`wheels` en `src/lib/models.js`): de frente muestran la foto; de lado, el flanco con la banda de color, el rin y el centro.
 Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 
 | Cuadro | Foto | Luz LED en 3D |
@@ -16,14 +17,14 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 | **Ferrari SF-24** | `public/cuadros/ferrari-4k.webp` | retroiluminación cálida sobre la pared |
 
 **Interacciones**
-- **Al entrar:** los cuadros se encienden uno por uno, con parpadeo de neón y el resplandor en la pared.
-- **Cursor sobre un cuadro:** el cuadro se inclina hacia ti y se acerca, sube el brillo y un reflejo recorre el vidrio.
-- **Clic:** abre el visor 3D. Ahí puedes girar el cuadro, acercarte con la rueda o pellizcando, y usar:
+- **Al entrar:** los cuadros caen uno por uno, se balancean en su clavo y la luz cálida se enciende con un destello justo al caer.
+- **Cursor sobre un cuadro:** el cuadro gira un poco de izquierda a derecha, se acerca y sube el brillo.
+- **Clic:** abre el visor 3D. Solo se gira de izquierda a derecha, en un rango corto, sin acercar ni alejar. Además:
   - **Vista lateral:** el cuadro 3D gira y se funde con **la foto real de costado**, en 4K. Esa foto se retocó para que los tres queden iguales: sin línea de luz interior, marco negro y la misma luz cálida en la pared. Si mueves el cursor encima, se inclina un poco; con un clic se amplía.
   - **LED encendido/apagado.**
   - **Fotos reales**, para ampliarlas.
 - **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
-- **En el móvil:** un cuadro a la vez, con flechas para pasar de uno a otro.
+- **En el móvil:** se ven los tres cuadros en fila.
 
 Si agregas un modelo **sin foto**, se muestra un auto LEGO 3D procedural. Ese auto sí se puede sacar del cuadro y tiene DRS.
 
