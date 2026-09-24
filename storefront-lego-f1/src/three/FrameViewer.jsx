@@ -68,7 +68,7 @@ export function FrameViewer({
         <Turntable angle={sideView ? 0.45 : 0}>
           <mesh position={[0, 0, -0.06]} receiveShadow>
             <planeGeometry args={[30, 20]} />
-            <meshStandardMaterial color="#141416" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
+            <meshBasicMaterial color="#0b0b0c" map={wall} toneMapped={false} />
           </mesh>
           <group
             onDoubleClick={(e) => {

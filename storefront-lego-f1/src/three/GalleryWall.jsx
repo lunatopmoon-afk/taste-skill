@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
@@ -51,12 +51,11 @@ const DROP_START = 0.25
 const DROP_STAGGER = 0.28
 const FALL_TIME = Math.sqrt((2 * DROP_HEIGHT) / GRAVITY)
 
-function HangingFrame({ product, index, x, onSelect, onHover }) {
+function HangingFrame({ product, index, x, onSelect, onHover, onLanded, lightsOn }) {
   const drop = useRef()
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
-  // La luz de atrás se prende cuando el cuadro realmente cae en su lugar
-  const [landed, setLanded] = useState(REDUCED_MOTION)
+  const landed = useRef(false)
   const sim = useRef({
     y: REDUCED_MOTION ? 0 : DROP_HEIGHT,
     vy: 0,
@@ -76,7 +75,10 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
         st.vy -= GRAVITY * dt
         st.y += st.vy * dt
         if (st.y <= 0) {
-          if (!landed) setLanded(true)
+          if (!landed.current) {
+            landed.current = true
+            onLanded(index)
+          }
           const impact = -st.vy
           st.y = 0
           st.vy = impact > 1.2 ? impact * 0.22 : 0
@@ -96,7 +98,7 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
     drop.current.rotation.z = st.rz
 
     const g = ref.current
-        // Al pasar el cursor el cuadro gira solo de izquierda a derecha, para ver las llantas
+    // Al pasar el cursor el cuadro gira solo de izquierda a derecha, para ver las llantas
     const ty = hovered ? pointer.x * 0.28 : 0
     g.rotation.y = THREE.MathUtils.damp(g.rotation.y, ty, 4, dt)
     g.position.z = THREE.MathUtils.damp(g.position.z, hovered ? 0.4 : 0, 4, dt)
@@ -127,8 +129,8 @@ function HangingFrame({ product, index, x, onSelect, onHover }) {
             <LedFrame
               product={product}
               hovered={hovered}
-              powered={landed}
-              introDelay={REDUCED_MOTION ? 0.3 + index * 0.3 : 0}
+              powered={lightsOn}
+              introDelay={REDUCED_MOTION ? 0.4 : 0.15}
             />
           </group>
         </group>
@@ -164,6 +166,16 @@ function CameraRig({ total, spacing }) {
 function Frames({ products, onActiveChange, onSelect }) {
   const size = useThree((state) => state.size)
   const spacing = spacingFor(size.width / size.height)
+  // Las luces de los tres cuadros se prenden juntas, cuando todos ya cayeron
+  const landedSet = useRef(new Set())
+  const [lightsOn, setLightsOn] = useState(REDUCED_MOTION)
+  const onLanded = useCallback(
+    (i) => {
+      landedSet.current.add(i)
+      if (landedSet.current.size >= products.length) setLightsOn(true)
+    },
+    [products.length],
+  )
   return (
     <>
       <Suspense fallback={null}>
@@ -175,6 +187,8 @@ function Frames({ products, onActiveChange, onSelect }) {
             x={(i - (products.length - 1) / 2) * spacing}
             onHover={onActiveChange}
             onSelect={onSelect}
+            onLanded={onLanded}
+            lightsOn={lightsOn}
           />
         ))}
       </Suspense>
@@ -213,7 +227,7 @@ export function GalleryWall({ products, onActiveChange, onSelect, paused = false
 
       <mesh position={[0, 0, -0.06]} receiveShadow>
         <planeGeometry args={[70, 40]} />
-        <meshStandardMaterial color="#141416" roughness={0.95} bumpMap={wall} bumpScale={1.4} />
+        <meshBasicMaterial color="#0b0b0c" map={wall} toneMapped={false} />
       </mesh>
 
       <Frames products={products} onActiveChange={onActiveChange} onSelect={onSelect} />
