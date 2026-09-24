@@ -414,31 +414,33 @@ function getGlossTexture() {
   return glossTexture
 }
 
-// Resplandor suave para la retroiluminación en la pared.
-// Se calcula píxel por píxel (sin ctx.filter, que Safari/iPhone/iPad no soportan):
-// brillo máximo pegado al borde del cuadro y se apaga suavemente hacia afuera.
+// Retroiluminación LED: una línea de luz delgada detrás del marco, como en la foto del
+// producto. Muy brillante pegada al borde y se apaga rápido: solo un filo de luz.
+// Se calcula píxel por píxel (sin ctx.filter, que Safari/iPhone/iPad no soportan).
+export const HALO_SCALE = 1.22 // el plano del halo mide 1.22× el cuadro
 let haloTexture
 function getHaloTexture() {
   if (haloTexture) return haloTexture
-  const W = 256
-  const H = 320
+  const W = 512
+  const H = 768
   const c = document.createElement('canvas')
   c.width = W
   c.height = H
   const ctx = c.getContext('2d')
   const img = ctx.createImageData(W, H)
-  // El plano del halo mide 1.75× el ancho y 1.5× el alto del cuadro
-  const halfW = W / 1.75 / 2
-  const halfH = H / 1.5 / 2
-  const reach = W * 0.11
+  const halfW = W / HALO_SCALE / 2
+  const halfH = H / HALO_SCALE / 2
+  const core = W * 0.01 // filo muy brillante
+  const tail = W * 0.028 // resplandor corto hacia afuera
+  const margin = (W - W / HALO_SCALE) / 2
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const dx = Math.max(Math.abs(x + 0.5 - W / 2) - halfW, 0)
       const dy = Math.max(Math.abs(y + 0.5 - H / 2) - halfH, 0)
-      const d = Math.hypot(dx, dy) / reach
-      // se desvanece del todo antes de llegar al borde del plano (sin cortes rectos)
-      const edge = Math.min(x, W - 1 - x, y, H - 1 - y) / (W * 0.12)
-      const a = Math.exp(-d * d * 1.6) * Math.min(1, edge) * 0.85
+      const d = Math.hypot(dx, dy)
+      // llega a cero antes del borde del plano: sin rectángulo visible alrededor
+      const fade = Math.max(0, 1 - d / (margin * 0.9))
+      const a = Math.min(1, 0.85 * Math.exp(-d / core) + 0.5 * Math.exp(-d / tail)) * fade * fade
       const i = (y * W + x) * 4
       img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
       img.data[i + 3] = Math.round(a * 255)
@@ -446,6 +448,7 @@ function getHaloTexture() {
   }
   ctx.putImageData(img, 0, 0)
   haloTexture = new THREE.CanvasTexture(c)
+  haloTexture.colorSpace = THREE.SRGBColorSpace
   return haloTexture
 }
 
@@ -533,12 +536,12 @@ export function LedFrame({
     const t = powered ? clock.elapsedTime - start.current - introDelay : -1
     const target = ledOn ? (hovered ? 1.3 : 1) : 0
     if (t < 0) level.current = 0
-    else if (t < 0.09 && ledOn) level.current = 2.1
+    else if (t < 0.07 && ledOn) level.current = 1.3
     else level.current = THREE.MathUtils.damp(level.current, target, 3.5, dt)
     const k = level.current
 
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)
-    if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * Math.min(k, 1.6) * 0.9
+    if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * Math.min(k, 1.3)
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
     const glow = 0.3 + Math.min(k, 1.12) * 0.7
@@ -591,7 +594,7 @@ export function LedFrame({
       {/* Retroiluminación sobre la pared */}
       {model.led.halo && (
         <mesh position={[0, 0, -0.035]} renderOrder={-1}>
-          <planeGeometry args={[frameW * 1.75, FRAME_H * 1.5]} />
+          <planeGeometry args={[frameW * HALO_SCALE, FRAME_H * HALO_SCALE]} />
           <meshBasicMaterial
             ref={haloMat}
             map={halo}
