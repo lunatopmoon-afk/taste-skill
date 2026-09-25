@@ -634,9 +634,9 @@ export function LedFrame({
     else if (start.current === null) start.current = clock.elapsedTime
     const t = powered ? clock.elapsedTime - start.current - introDelay : -1
     const target = ledOn ? (hovered ? 1.3 : 1) : 0
+    // se encienden con una subida suave (sin destellos ni parpadeo)
     if (t < 0) level.current = 0
-    else if (t < 0.07 && ledOn) level.current = 1.3
-    else level.current = THREE.MathUtils.damp(level.current, target, 3.5, dt)
+    else level.current = THREE.MathUtils.damp(level.current, target, 3, Math.min(dt, 1 / 30))
     const k = level.current
 
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)

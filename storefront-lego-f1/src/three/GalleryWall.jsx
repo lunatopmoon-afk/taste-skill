@@ -5,6 +5,24 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { LedFrame, FRAME_W, FRAME_H, INNER_H } from './LedFrame.jsx'
 import { IntroCars, INTRO, LOW_POWER } from './Intro.jsx'
+import { useTexture } from '@react-three/drei'
+import { MODELS } from '../lib/models.js'
+
+// Precarga de todas las imágenes de la entrada y los cuadros, en cuanto carga la página
+const SMALL = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
+Object.values(MODELS).forEach((m) =>
+  [
+    SMALL ? m.posterSmall : m.poster,
+    m.relief,
+    m.posterEmpty,
+    m.shadow,
+    SMALL ? m.cutout : m.cutout4k,
+    m.cutout,
+    m.realCar,
+  ]
+    .filter(Boolean)
+    .forEach((url) => useTexture.preload(url)),
+)
 
 // Pared de la galería. Al entrar corre la secuencia de Intro.jsx: autos reales que caen,
 // estallan en piezas LEGO, se rearman, los cuadros llegan desde el fondo, el LEGO encaja
@@ -268,7 +286,7 @@ export function GalleryWall({
 }) {
   return (
     <Canvas
-      shadows
+      shadows={!LOW_POWER}
       frameloop={paused ? 'never' : 'always'}
       dpr={LOW_POWER ? [1, 1.5] : [1, 2]}
       camera={{ position: [0, -0.95, 24], fov: 22 }}

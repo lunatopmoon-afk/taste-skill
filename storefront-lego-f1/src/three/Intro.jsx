@@ -39,7 +39,7 @@ const SMALL_SCREEN =
 export const LOW_POWER =
   SMALL_SCREEN || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
 // Cuadrícula de ladrillos 1x2 sobre cada auto: columnas a lo ancho
-const GRID_COLS = SMALL_SCREEN ? 8 : 12
+const GRID_COLS = SMALL_SCREEN ? 8 : LOW_POWER ? 10 : 12
 // piezas Technic extra (vigas, engranajes…) por cada ladrillo, para variedad
 const EXTRA_RATIO = LOW_POWER ? 0.3 : 0.6
 
@@ -521,7 +521,9 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
       ),
     // se recalcula si cambia el tamaño de la pantalla
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [size.width, size.height, layout.dist, layout.baseY, list.length, xs.join(',')],
+    // solo se recalcula si el ancho cambia de verdad (no cuando la barra del navegador del
+    // celular aparece o se esconde): así la animación no se reinicia ni parpadea
+    [Math.round(size.width / 40), list.length],
   )
 
   const cars = useMemo(
