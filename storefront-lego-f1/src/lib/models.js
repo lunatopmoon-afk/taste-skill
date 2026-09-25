@@ -19,6 +19,9 @@ export const MODELS = {
     sidePhoto: '/cuadros/mercedes-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/mercedes-lateral-2k.webp',
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
+    cutout: '/cuadros/mercedes-auto.webp',
+    posterEmpty: '/cuadros/mercedes-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
       [0.2665, 0.234, 0.124, 0.112],
@@ -61,6 +64,9 @@ export const MODELS = {
     sidePhoto: '/cuadros/redbull-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/redbull-lateral-2k.webp',
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
+    cutout: '/cuadros/redbull-auto.webp',
+    posterEmpty: '/cuadros/redbull-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
       [0.3048, 0.2422, 0.1067, 0.1055],
@@ -103,6 +109,9 @@ export const MODELS = {
     sidePhoto: '/cuadros/ferrari-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/ferrari-lateral-2k.webp',
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
+    // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
+    cutout: '/cuadros/ferrari-auto.webp',
+    posterEmpty: '/cuadros/ferrari-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
       [0.2761, 0.2104, 0.1313, 0.126],

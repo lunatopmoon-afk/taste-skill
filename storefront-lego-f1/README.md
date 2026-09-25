@@ -17,7 +17,14 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 | **Ferrari SF-24** | `public/cuadros/ferrari-4k.webp` | retroiluminación cálida sobre la pared |
 
 **Interacciones**
-- **Al entrar:** los cuadros caen uno por uno, se balancean en su clavo y la luz cálida se enciende con un destello justo al caer.
+- **Entrada (unos 9 s, con botón "Saltar intro"):**
+  1. Caen tres autos F1 con pintura brillante sobre negro, con el morro hacia abajo.
+  2. Estallan en piezas LEGO que vuelan hacia la cámara.
+  3. Las piezas se rearman: cada una toma el color de la foto real en su punto, y el conjunto se funde con el auto LEGO de la foto, ahora con el morro hacia arriba.
+  4. Los cuadros llegan vacíos desde el fondo oscuro y cada LEGO encaja en el suyo.
+  5. Se prenden las tres luces a la vez.
+
+  La secuencia está en `src/three/Intro.jsx` y sus tiempos, en `INTRO`. Para revisar un momento exacto, agrega `?introT=4.2` a la dirección y la animación se congela en ese segundo. Con "reducir movimiento" activado, la entrada se salta.
 - **Cursor sobre un cuadro:** el cuadro gira un poco de izquierda a derecha, se acerca y sube el brillo.
 - **Clic:** abre el visor 3D. Solo se gira de izquierda a derecha, en un rango corto, sin acercar ni alejar. Además:
   - **Vista lateral:** el cuadro 3D gira y se funde con **la foto real de costado**, en 4K. Esa foto se retocó para que los tres queden iguales: sin línea de luz interior, marco negro y la misma luz cálida en la pared. Si mueves el cursor encima, se inclina un poco; con un clic se amplía.
@@ -34,7 +41,8 @@ Si agregas un modelo **sin foto**, se muestra un auto LEGO 3D procedural. Ese au
 2. Guárdala en `public/cuadros/<modelo>-4k.webp` (4096 px de alto) y `<modelo>-2k.webp` (2048 px). Si tienes la foto original en alta resolución, úsala directo: se verá todavía mejor.
 3. En `src/lib/models.js`, pon en `posterAspect` el ancho ÷ alto de la imagen.
 4. Para la vista lateral, guarda la foto de costado como `<modelo>-lateral-4k.webp` y `<modelo>-lateral-2k.webp`.
-5. Para el relieve, crea `public/cuadros/<modelo>-relieve.png`: una imagen en escala de grises del mismo encuadre, con el negro como fondo plano y el blanco como la parte que más sobresale (las llantas). Si no existe, la foto se ve plana.
+5. Para la entrada: `<modelo>-auto.webp` es el auto recortado con transparencia y `<modelo>-vacio.webp` es el póster sin el auto.
+6. Para el relieve, crea `public/cuadros/<modelo>-relieve.png`: una imagen en escala de grises del mismo encuadre, con el negro como fondo plano y el blanco como la parte que más sobresale (las llantas). Si no existe, la foto se ve plana.
 
 ## 1. Conectar tu tienda
 
