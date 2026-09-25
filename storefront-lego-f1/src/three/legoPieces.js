@@ -17,38 +17,74 @@ function prep(g) {
   return out
 }
 
+// Stud con el borde de arriba redondeado (perfil torneado, como el real)
+const STUD_PROFILE = [
+  new THREE.Vector2(0, 0),
+  new THREE.Vector2(STUD_R, 0),
+  new THREE.Vector2(STUD_R, STUD_H - 0.05),
+  new THREE.Vector2(STUD_R - 0.015, STUD_H - 0.015),
+  new THREE.Vector2(STUD_R - 0.05, STUD_H),
+  new THREE.Vector2(0, STUD_H),
+]
 function studs(cols, rows, top) {
   const parts = []
   for (let i = 0; i < cols; i++)
     for (let j = 0; j < rows; j++) {
-      const s = new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 20)
-      s.translate(i - (cols - 1) / 2, top + STUD_H / 2, j - (rows - 1) / 2)
+      const s = new THREE.LatheGeometry(STUD_PROFILE, 22)
+      s.translate(i - (cols - 1) / 2, top, j - (rows - 1) / 2)
       parts.push(prep(s))
     }
   return parts
 }
 
+// Ladrillo/placa real: tapa arriba, cuatro paredes, hueco abajo con sus tubos
+// (se ve cuando la pieza gira en el aire). Las normales originales se conservan:
+// las aristas redondeadas brillan suave, sin facetas.
+const WALL = 0.12
 function brick(cols, rows, h = BRICK_H) {
-  const body = new RoundedBoxGeometry(cols - 0.02, h, rows - 0.02, 2, 0.05)
-  const g = mergeGeometries([prep(body), ...studs(cols, rows, h / 2)])
-  g.computeVertexNormals()
-  return g
+  const W = cols - 0.02
+  const D = rows - 0.02
+  const r = 0.045
+  const parts = [
+    new RoundedBoxGeometry(W, 0.14, D, 2, r).translate(0, h / 2 - 0.07, 0), // tapa
+    new RoundedBoxGeometry(W, h, WALL, 2, r).translate(0, 0, D / 2 - WALL / 2),
+    new RoundedBoxGeometry(W, h, WALL, 2, r).translate(0, 0, -D / 2 + WALL / 2),
+    new RoundedBoxGeometry(WALL, h, D, 2, r).translate(W / 2 - WALL / 2, 0, 0),
+    new RoundedBoxGeometry(WALL, h, D, 2, r).translate(-W / 2 + WALL / 2, 0, 0),
+  ]
+  // tubos de abajo: entre studs en piezas de 2 de ancho, varillas en las de 1
+  if (rows >= 2 && cols >= 2) {
+    for (let i = 0; i < cols - 1; i++)
+      for (let j = 0; j < rows - 1; j++)
+        parts.push(
+          new THREE.CylinderGeometry(0.4, 0.4, h - 0.14, 18, 1, true).translate(
+            i - (cols - 2) / 2,
+            -0.07,
+            j - (rows - 2) / 2,
+          ),
+        )
+  } else if (cols >= 2) {
+    for (let i = 0; i < cols - 1; i++)
+      parts.push(
+        new THREE.CylinderGeometry(0.15, 0.15, h - 0.14, 12).translate(
+          i - (cols - 2) / 2,
+          -0.07,
+          0,
+        ),
+      )
+  }
+  return mergeGeometries([...parts.map(prep), ...studs(cols, rows, h / 2)])
 }
 
 // Teja (tile): lisa, sin studs, con una ranura fina en la base
 function tile(cols, rows) {
-  const body = new RoundedBoxGeometry(cols - 0.02, PLATE_H, rows - 0.02, 2, 0.04)
-  const g = prep(body)
-  g.computeVertexNormals()
-  return g
+  return prep(new RoundedBoxGeometry(cols - 0.02, PLATE_H, rows - 0.02, 2, 0.04))
 }
 
 // Plato redondo 1x1 con su stud
 function roundPlate() {
   const body = new THREE.CylinderGeometry(0.49, 0.49, PLATE_H, 24)
-  const g = mergeGeometries([prep(body), ...studs(1, 1, PLATE_H / 2)])
-  g.computeVertexNormals()
-  return g
+  return mergeGeometries([prep(body), ...studs(1, 1, PLATE_H / 2)])
 }
 
 // Ladrillo en pendiente 2x2 (slope 45°): studs solo en la fila de atrás
@@ -69,9 +105,8 @@ function slope() {
   })
   body.translate(0, 0, -0.99)
   const st = studs(1, 2, BRICK_H / 2).map((g) => g.translate(-0.5, 0, 0))
-  const g = mergeGeometries([prep(body), ...st])
-  g.computeVertexNormals()
-  return g
+  body.computeVertexNormals()
+  return mergeGeometries([prep(body), ...st])
 }
 
 // Viga Technic en L (3x5) con agujeros
@@ -80,9 +115,7 @@ function lBeam() {
   const b = technicBeam(3).rotateZ(Math.PI / 2)
   a.translate(0, 0, 0)
   b.translate(-2, 1, 0)
-  const g = mergeGeometries([a, b])
-  g.computeVertexNormals()
-  return g
+  return mergeGeometries([a, b])
 }
 
 // Conector eje-pin: cilindro con collarín
@@ -91,7 +124,6 @@ function connector() {
   const b = new THREE.CylinderGeometry(0.44, 0.44, 0.3, 20)
   const g = mergeGeometries([prep(a), prep(b)])
   g.rotateZ(Math.PI / 2)
-  g.computeVertexNormals()
   return g
 }
 
@@ -192,9 +224,7 @@ function axle(len) {
 function pin() {
   const a = new THREE.CylinderGeometry(0.24, 0.24, 1.9, 16)
   const b = new THREE.CylinderGeometry(0.3, 0.3, 0.14, 16)
-  const g = mergeGeometries([prep(a), prep(b)])
-  g.computeVertexNormals()
-  return g
+  return mergeGeometries([prep(a), prep(b)])
 }
 
 let cache
