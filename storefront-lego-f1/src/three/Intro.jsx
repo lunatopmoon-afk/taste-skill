@@ -5,26 +5,28 @@ import * as THREE from 'three'
 import { legoGeometries, nearestLegoColor, PIECE_MIX } from './legoPieces.js'
 
 // Entrada de la página (boceto aprobado):
-//   1. Los tres autos F1 reales (fotos recortadas) llegan flotando, cerca y grandes.
-//   2. Se desintegran con un borde incandescente y estallan en piezas LEGO reales
-//      (ladrillos con studs, vigas Technic, engranajes, ejes, pines) en colores LEGO.
+//   1. Los tres autos F1 reales, vistos desde arriba (como en el video aprobado), caen
+//      desde lo alto hacia la pantalla y quedan grandes y cerca, morro abajo.
+//   2. Se van rompiendo poco a poco: de todo el auto saltan piezas LEGO reales
+//      (ladrillos con studs, vigas Technic, engranajes, ejes, pines) que vuelan hacia la
+//      cámara, mientras la cámara se acerca y una luz del color de cada equipo los baña.
 //   3. Las piezas se rearman como el auto LEGO de la foto del cuadro, morro arriba.
 //   4. Los cuadros llegan desde el fondo y cada LEGO encaja en su cuadro.
 //   5. Se prenden las tres luces a la vez.
 // Todo se mide en segundos sobre un único reloj (timeline.current.t).
 
 export const INTRO = {
-  carsIn: 0, // llegan los autos reales
-  burst: 3.4, // se desintegran
-  dissolve: 0.75, // duración de la desintegración
-  reform: 5.0, // las piezas empiezan a rearmarse
-  reformed: 6.7, // ya son LEGO
-  framesIn: 6.8, // los cuadros llegan desde el fondo
-  framesSet: 8.3,
-  integrate: 8.4, // el LEGO entra al cuadro
-  integrated: 8.95,
-  lights: 9.2, // luces
-  done: 9.9,
+  carsIn: 0, // caen los autos reales
+  burst: 1.9, // empiezan a romperse
+  dissolve: 2.5, // cuánto tarda el auto en deshacerse por completo
+  reform: 4.7, // las piezas empiezan a rearmarse
+  reformed: 6.4, // ya son LEGO
+  framesIn: 6.5, // los cuadros llegan desde el fondo
+  framesSet: 8.0,
+  integrate: 8.1, // el LEGO entra al cuadro
+  integrated: 8.65,
+  lights: 8.9, // luces
+  done: 9.6,
 }
 
 export const Z_FLOAT = 1.4 // altura a la que flotan los LEGO delante de la pared
@@ -32,9 +34,9 @@ const Z_REAL = 6 // los autos reales flotan mucho más cerca de la cámara
 
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
-const PIECES_PER_CAR = SMALL_SCREEN ? 170 : 340
+const PIECES_PER_CAR = SMALL_SCREEN ? 220 : 480
 // tamaño de 1 stud en la escena (en celular la cámara está más lejos: piezas más grandes)
-const PIECE_SCALE = SMALL_SCREEN ? 0.085 : 0.052
+const PIECE_SCALE = SMALL_SCREEN ? 0.07 : 0.05
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -47,30 +49,18 @@ function rng(seed) {
   return () => (s = (s * 16807) % 2147483647) / 2147483647
 }
 
-// Dónde flotan los autos reales: en fila (pantalla ancha) o apilados (celular)
+// Dónde quedan los autos reales: siempre en fila, vistos desde arriba y lo más grandes posible
 function realLayout(products, size, camera, layout) {
   const aspect = size.width / size.height
   const fov = THREE.MathUtils.degToRad(camera.fov)
-  const D = layout.dist * 1.07 // la cámara aún está algo alejada en ese momento
+  const D = layout.dist * 1.1 // la cámara aún está algo alejada en ese momento
   const visH = 2 * (D - Z_REAL) * Math.tan(fov / 2)
   const visW = visH * aspect
-  const aspects = products.map((p) => p.model.realAspect ?? 2.3)
-  if (aspect >= 1) {
-    const slot = (visW * 0.9) / products.length
-    return products.map((_, i) => {
-      const w = Math.min(slot * 0.96, visH * 0.55 * aspects[i])
-      return { x: (i - (products.length - 1) / 2) * slot, y: layout.baseY, w, h: w / aspects[i] }
-    })
-  }
-  const w = visW * 0.92
-  const hs = aspects.map((a) => w / a)
-  const total = hs.reduce((a, b) => a + b, 0) * 1.08
-  let y = layout.baseY + total / 2
-  return hs.map((h) => {
-    y -= (h * 1.08) / 2
-    const out = { x: 0, y, w, h }
-    y -= (h * 1.08) / 2
-    return out
+  const slot = (visW * 0.96) / products.length
+  return products.map((p, i) => {
+    const a = p.model.realAspect ?? 0.41
+    const h = Math.min(visH * 0.82, (slot * 0.9) / a)
+    return { x: (i - (products.length - 1) / 2) * slot, y: layout.baseY, w: h * a, h, visH }
   })
 }
 
@@ -98,13 +88,15 @@ const dissolveFragment = /* glsl */ `
   }
   void main() {
     vec4 col = texture2D(map, vUv);
-    // se deshace desde el centro hacia afuera, con borde irregular
+    // se rompe a trozos por todo el auto (como piezas que se sueltan), algo antes al centro
     vec2 c = (vUv - 0.5) * vec2(uAspect, 1.0);
-    float field = length(c) / (0.5 * length(vec2(uAspect, 1.0))) * 0.75
-      + (noise(vUv * vec2(uAspect, 1.0) * 9.0) * 0.6 + noise(vUv * vec2(uAspect, 1.0) * 23.0) * 0.4) * 0.25;
+    vec2 q = vUv * vec2(uAspect, 1.0);
+    float field = length(c) / (0.5 * length(vec2(uAspect, 1.0))) * 0.3
+      + (noise(q * 16.0) * 0.55 + noise(q * 41.0) * 0.45) * 0.7;
     if (field < uProgress) discard;
-    float edge = 1.0 - smoothstep(0.0, 0.05, field - uProgress);
-    col.rgb += uGlow * edge * step(0.001, uProgress) * 3.0;
+    // borde oscuro, como el hueco que deja una pieza al saltar
+    float edge = 1.0 - smoothstep(0.0, 0.035, field - uProgress);
+    col.rgb *= 1.0 - edge * step(0.001, uProgress) * 0.75;
     gl_FragColor = vec4(col.rgb, col.a * uOpacity);
     #include <colorspace_fragment>
   }
@@ -137,22 +129,26 @@ function RealCar({ texture, place, aspect, index, timeline }) {
     const end = INTRO.burst + INTRO.dissolve
     g.visible = t < end
     if (!g.visible) return
-    const start = INTRO.carsIn + index * 0.2
-    const p = easeOutCubic(span(t, start, start + 1.9))
-    const side = index % 2 ? 1 : -1
-    // llega desde el fondo oscuro, se acerca despacio y flota
-    const approach = span(t, start + 1.9, INTRO.burst) * 0.3
+    // Cae desde arriba y desde el fondo hacia la pantalla (como en el video), con un
+    // pequeño rebote al detenerse
+    const start = INTRO.carsIn + index * 0.06
+    const u = span(t, start, start + 1.3)
+    const c1 = 1.25
+    const back = 1 + (c1 + 1) * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2) // easeOutBack
+    const fall = u >= 1 ? 1 : back
     g.position.set(
       place.x,
-      place.y + (1 - p) * 2.5 + Math.sin(t * 1.4 + index * 2) * 0.05,
-      THREE.MathUtils.lerp(-16, Z_REAL, p) + approach,
+      place.y + (1 - fall) * place.visH * 0.75,
+      THREE.MathUtils.lerp(Z_REAL - 14, Z_REAL, easeOutCubic(u)),
     )
-    g.rotation.set(Math.sin(t * 0.9 + index) * 0.03, (1 - p) * 0.5 * side, 0)
-    // tiembla justo antes de romperse
-    const pre = span(t, INTRO.burst - 0.45, INTRO.burst)
-    g.position.x += Math.sin(t * 90 + index) * pre * pre * 0.03
-    material.uniforms.uOpacity.value = Math.pow(p, 0.7)
-    material.uniforms.uProgress.value = span(t, INTRO.burst, end) * 1.25
+    // la foto ya viene morro abajo, como en el video
+    g.rotation.set(0, 0, 0)
+    // al romperse, el auto se sacude levemente
+    const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 3) : 0
+    g.position.x += Math.sin(t * 60 + index) * hit * 0.04
+    material.uniforms.uOpacity.value = Math.min(1, u * 2.5)
+    // se rompe poco a poco al principio y del todo al final (el auto sigue visible, como en el video)
+    material.uniforms.uProgress.value = Math.pow(span(t, INTRO.burst, end), 2.2) * 1.05
   })
 
   return (
@@ -203,7 +199,7 @@ function LegoBurst({ cars, timeline }) {
       new THREE.MeshPhysicalMaterial({
         roughness: 0.24,
         metalness: 0,
-        clearcoat: 0.6,
+        clearcoat: 0.3,
         clearcoatRoughness: 0.12,
       }),
     [],
@@ -223,26 +219,26 @@ function LegoBurst({ cars, timeline }) {
         const r = rand()
         let acc = 0
         const type = PIECE_MIX.find(([, w]) => (acc += w) >= r)?.[0] ?? 'beam7'
-        // aparece cuando el borde incandescente pasa por su punto (mismo campo que el shader)
+        // cada pieza se suelta en un momento distinto mientras el auto se rompe
         const cx = (a.u - 0.5) * aspect
         const cy = a.v - 0.5
-        const field = (Math.hypot(cx, cy) / (0.5 * Math.hypot(aspect, 1))) * 0.75 + rand() * 0.25
+        const field = Math.pow((Math.hypot(cx, cy) / (0.5 * Math.hypot(aspect, 1))) * 0.3 + rand() * 0.7, 1 / 2.2)
         const dist = Math.hypot(a.x, a.y) + 0.2
-        const out = 1.4 + rand() * 3.6
+        const out = 0.5 + rand() * 1.8
         all.push({
           type,
           fromColor: a.color,
           toColor: b.color,
           start: new THREE.Vector3(car.place.x + a.x, car.place.y + a.y, Z_REAL + 0.7),
           vel: new THREE.Vector3(
-            (a.x / dist) * out + (rand() - 0.5) * 2,
-            (a.y / dist) * out + (rand() - 0.5) * 2 + 0.6,
-            (rand() - 0.45) * 9, // hacia la cámara y hacia el fondo: profundidad
+            (a.x / dist) * out + (rand() - 0.5) * 1.6,
+            (a.y / dist) * out + (rand() - 0.5) * 1.6,
+            1 + rand() * 4.5, // saltan hacia la cámara: profundidad
           ),
           spin: new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(8),
           target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
           size: PIECE_SCALE * (0.8 + rand() * 0.55),
-          spawn: INTRO.burst + (INTRO.dissolve * Math.min(field, 1.25)) / 1.25,
+          spawn: INTRO.burst + INTRO.dissolve * Math.min(field, 1) * 0.95,
           delay: rand() * 0.55,
         })
       }
@@ -364,28 +360,33 @@ function LegoCutout({ cutout, x, width, height, timeline }) {
   )
 }
 
-// Destello del estallido y luz frontal para que las piezas se vean con su color
-function BurstLights({ timeline }) {
-  const flash = useRef()
+// Luces del estallido: una luz del color de cada equipo detrás de cada auto (como en el
+// video, el fondo se tiñe de turquesa, azul y rojo) y una luz frontal suave para las piezas
+function BurstLights({ cars, timeline }) {
+  const team = useRef([])
   const fill = useRef()
   useFrame(() => {
     const t = timeline.current.t
-    const f = t >= INTRO.burst ? Math.exp(-(t - INTRO.burst) * 4) : 0
-    flash.current.intensity = f * 80
     const on =
-      span(t, INTRO.burst, INTRO.burst + 0.3) * (1 - span(t, INTRO.reformed, INTRO.reformed + 0.6))
-    fill.current.intensity = on * 2.2
+      easeOutCubic(span(t, INTRO.burst, INTRO.burst + 0.8)) *
+      (1 - span(t, INTRO.reformed - 0.3, INTRO.reformed + 0.5))
+    team.current.forEach((l) => l && (l.intensity = on * 8))
+    fill.current.intensity = on * 1.5
   })
   return (
     <>
-      <pointLight
-        ref={flash}
-        position={[0, 0, Z_REAL + 3]}
-        color="#ffd9a0"
-        distance={40}
-        decay={1.4}
-      />
-      <directionalLight ref={fill} position={[2, 4, 12]} color="#fff4e6" intensity={0} />
+      {cars.map((c, i) => (
+        <pointLight
+          key={i}
+          ref={(l) => (team.current[i] = l)}
+          position={[c.place.x, c.place.y, Z_REAL - 3]}
+          color={c.color}
+          distance={c.place.h * 2.2}
+          decay={1.2}
+          intensity={0}
+        />
+      ))}
+      <directionalLight ref={fill} position={[1, 3, 14]} color="#fff4e6" intensity={0} />
     </>
   )
 }
@@ -419,6 +420,7 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
           legoX: xs[idx],
           legoW: sizes[idx][0],
           legoH: sizes[idx][1],
+          color: p.model.backdrop.center,
         }
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -448,7 +450,7 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
           timeline={timeline}
         />
       ))}
-      <BurstLights timeline={timeline} />
+      <BurstLights cars={cars} timeline={timeline} />
     </>
   )
 }

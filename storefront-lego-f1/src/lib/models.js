@@ -23,7 +23,7 @@ export const MODELS = {
     cutout: '/cuadros/mercedes-auto.webp',
     // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
     realCar: '/cuadros/mercedes-real.webp',
-    realAspect: 2.0374,
+    realAspect: 0.4088,
     posterEmpty: '/cuadros/mercedes-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
@@ -71,7 +71,7 @@ export const MODELS = {
     cutout: '/cuadros/redbull-auto.webp',
     // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
     realCar: '/cuadros/redbull-real.webp',
-    realAspect: 2.449,
+    realAspect: 0.4238,
     posterEmpty: '/cuadros/redbull-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
@@ -119,7 +119,7 @@ export const MODELS = {
     cutout: '/cuadros/ferrari-auto.webp',
     // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
     realCar: '/cuadros/ferrari-real.webp',
-    realAspect: 2.6374,
+    realAspect: 0.4156,
     posterEmpty: '/cuadros/ferrari-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
