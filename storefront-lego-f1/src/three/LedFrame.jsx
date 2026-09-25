@@ -355,14 +355,17 @@ function PhotoPoster({
   emptySrc,
   emptyMat,
   shadowSrc,
+  cutoutSrc,
+  cutoutMat,
   showCar = true,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
-  const [texture, heightMap, emptyTex, shadowTex] = useTexture([
+  const [texture, heightMap, emptyTex, shadowTex, cutoutTex] = useTexture([
     SMALL_SCREEN && srcSmall ? srcSmall : src,
     relief ?? src,
     emptySrc ?? src,
     shadowSrc ?? relief ?? src,
+    cutoutSrc ?? src,
   ])
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
@@ -377,12 +380,18 @@ function PhotoPoster({
       emptyMat.map = emptyTex
       emptyMat.needsUpdate = true
     }
+    if (cutoutMat) {
+      cutoutTex.colorSpace = THREE.SRGBColorSpace
+      cutoutTex.anisotropy = maxAnisotropy
+      cutoutMat.map = cutoutTex
+      cutoutMat.needsUpdate = true
+    }
     if (treadMat) {
       treadMat.map = texture
       treadMat.emissiveMap = texture
       treadMat.needsUpdate = true
     }
-  }, [texture, emptyTex, material, treadMat, emptyMat, maxAnisotropy])
+  }, [texture, emptyTex, cutoutTex, material, treadMat, emptyMat, cutoutMat, maxAnisotropy])
   const geometry = useMemo(
     () => reliefGeometry(width, height, relief ? heightMap.image : null),
     [width, height, relief, heightMap],
@@ -396,9 +405,23 @@ function PhotoPoster({
       </mesh>
     )
   }
+  // Capas: fondo del póster (plano, sin el auto) + sombra + el LEGO recortado encima, a la
+  // altura real a la que sobresale. Nada se estira: sin manchas ni deformaciones.
+  const layered = Boolean(cutoutSrc && cutoutMat && emptyMat)
   return (
     <>
-      <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+      {layered ? (
+        <>
+          <mesh position={[0, 0, 0.002]} material={emptyMat}>
+            <planeGeometry args={[width, height]} />
+          </mesh>
+          <mesh position={[0, 0, RELIEF_DEPTH]} material={cutoutMat} renderOrder={2}>
+            <planeGeometry args={[width, height]} />
+          </mesh>
+        </>
+      ) : (
+        <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+      )}
       {/* Sombra real del LEGO sobre el póster: la luz viene de arriba a la izquierda */}
       {shadowSrc && (
         <mesh position={[width * 0.018, -height * 0.014, 0.0035]} renderOrder={1}>
@@ -541,6 +564,17 @@ export function LedFrame({
   }, [model])
   const emptyMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
   useEffect(() => () => emptyMat.dispose(), [emptyMat])
+  const cutoutMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        toneMapped: false,
+        transparent: true,
+        alphaTest: 0.02,
+        depthWrite: false,
+      }),
+    [],
+  )
+  useEffect(() => () => cutoutMat.dispose(), [cutoutMat])
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
@@ -585,6 +619,7 @@ export function LedFrame({
     photoMat.emissiveIntensity = glow * 0.92
     photoMat.color.setScalar(glow * 0.22)
     emptyMat.color.setScalar(glow * 0.95)
+    cutoutMat.color.setScalar(glow * 0.95)
     treadMat.emissiveIntensity = glow * 0.92
     treadMat.color.setScalar(glow * 0.22)
     if (glossMat.current) {
@@ -671,6 +706,8 @@ export function LedFrame({
           sideMat={sideMat}
           emptySrc={model.posterEmpty}
           shadowSrc={model.shadow}
+          cutoutSrc={SMALL_SCREEN ? model.cutout : model.cutout4k}
+          cutoutMat={cutoutMat}
           emptyMat={emptyMat}
           showCar={showCar}
         />

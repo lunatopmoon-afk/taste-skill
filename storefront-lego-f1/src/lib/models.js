@@ -22,6 +22,7 @@ export const MODELS = {
     shadow: '/cuadros/mercedes-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/mercedes-auto.webp',
+    cutout4k: '/cuadros/mercedes-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/mercedes-real.webp',
     realAspect: 0.3571,
@@ -71,6 +72,7 @@ export const MODELS = {
     shadow: '/cuadros/redbull-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/redbull-auto.webp',
+    cutout4k: '/cuadros/redbull-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/redbull-real.webp',
     realAspect: 0.365,
@@ -120,6 +122,7 @@ export const MODELS = {
     shadow: '/cuadros/ferrari-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/ferrari-auto.webp',
+    cutout4k: '/cuadros/ferrari-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/ferrari-real.webp',
     realAspect: 0.3736,
