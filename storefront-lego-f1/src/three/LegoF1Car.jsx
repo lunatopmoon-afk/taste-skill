@@ -97,7 +97,12 @@ function Wheel({ radius, width, stripe, side }) {
       {[1, -1].map((f) => (
         <mesh key={f} position={[0, (f * width) / 2, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[radius * 0.8, 0.07, 8, 48]} />
-          <meshStandardMaterial color={stripe} roughness={0.5} emissive={stripe} emissiveIntensity={0.15} />
+          <meshStandardMaterial
+            color={stripe}
+            roughness={0.5}
+            emissive={stripe}
+            emissiveIntensity={0.15}
+          />
         </mesh>
       ))}
       <mesh position={[0, 0, 0]}>
@@ -138,10 +143,21 @@ function FrontWing({ l }) {
       ))}
       {/* Detalle de acento en el borde exterior */}
       {[1, -1].map((s) => (
-        <Block key={s} size={[2.2, 0.24, 0.35]} pos={[s * 3.4, 0.5, -15.1]} color={l.accent} radius={0.1} />
+        <Block
+          key={s}
+          size={[2.2, 0.24, 0.35]}
+          pos={[s * 3.4, 0.5, -15.1]}
+          color={l.accent}
+          radius={0.1}
+        />
       ))}
       {[1, -1].map((s) => (
-        <Block key={`ep${s}`} size={[0.22, 1.7, 3.4]} pos={[s * span, 0.95, -13.6]} color={l.wing} />
+        <Block
+          key={`ep${s}`}
+          size={[0.22, 1.7, 3.4]}
+          pos={[s * span, 0.95, -13.6]}
+          color={l.wing}
+        />
       ))}
     </group>
   )
@@ -157,9 +173,21 @@ function RearWing({ l, drsRef }) {
         </group>
       ))}
       {/* Plano principal + ala de DRS (bisagra en el borde de ataque) */}
-      <Block size={[8.4, 0.26, 1.5]} pos={[0, 3.3, 11.0]} rot={[-0.15, 0, 0]} color={l.wing} radius={0.1} />
+      <Block
+        size={[8.4, 0.26, 1.5]}
+        pos={[0, 3.3, 11.0]}
+        rot={[-0.15, 0, 0]}
+        color={l.wing}
+        radius={0.1}
+      />
       <group ref={drsRef} position={[0, 3.75, 11.6]}>
-        <Block size={[8.4, 0.22, 1.2]} pos={[0, 0, 0.55]} rot={[-0.35, 0, 0]} color={l.rearFlap ?? l.wing} radius={0.1} />
+        <Block
+          size={[8.4, 0.22, 1.2]}
+          pos={[0, 0, 0.55]}
+          rot={[-0.35, 0, 0]}
+          color={l.rearFlap ?? l.wing}
+          radius={0.1}
+        />
       </group>
       {/* Beam wing, pilón central y difusor */}
       <Block size={[5.6, 0.24, 0.9]} pos={[0, 1.4, 11.6]} color={l.wing} />
@@ -167,7 +195,12 @@ function RearWing({ l, drsRef }) {
       <Block size={[4.2, 0.9, 1.6]} pos={[0, 0.6, 12.2]} color={CARBON} />
       <mesh position={[0, 1.2, 12.9]}>
         <boxGeometry args={[0.35, 0.35, 0.1]} />
-        <meshStandardMaterial color="#ff2a2a" emissive="#ff2a2a" emissiveIntensity={2} toneMapped={false} />
+        <meshStandardMaterial
+          color="#ff2a2a"
+          emissive="#ff2a2a"
+          emissiveIntensity={2}
+          toneMapped={false}
+        />
       </mesh>
     </group>
   )
@@ -181,7 +214,12 @@ function Engine({ kind, l }) {
       <group position={[0, 2.6, 4.6]}>
         {[-1, 1].map((s) =>
           [0, 1, 2].map((i) => (
-            <mesh key={`${s}${i}`} position={[s * 0.55, 0.25, -1.2 + i * 1.2]} rotation={[0, 0, s * 0.5]} castShadow>
+            <mesh
+              key={`${s}${i}`}
+              position={[s * 0.55, 0.25, -1.2 + i * 1.2]}
+              rotation={[0, 0, s * 0.5]}
+              castShadow
+            >
               <cylinderGeometry args={[0.32, 0.32, 0.9, 16]} />
               <meshStandardMaterial color={bronze} metalness={0.75} roughness={0.3} />
             </mesh>
@@ -211,9 +249,26 @@ function Stripes({ model, l }) {
       <group>
         {[1, -1].map((s) => (
           <group key={s}>
-            <Block size={[0.14, 0.06, 6]} pos={[s * 0.62, 2.23, -9.7]} color={l.accent} radius={0.02} />
-            <Block size={[0.18, 0.06, 4.6]} pos={[s * 3.2, 2.02, 0.5]} rot={[0, s * 0.18, 0]} color={l.stripes} radius={0.02} />
-            <Block size={[0.14, 0.06, 3]} pos={[s * 2.4, 2.02, 3.6]} rot={[0, s * 0.35, 0]} color={l.accent} radius={0.02} />
+            <Block
+              size={[0.14, 0.06, 6]}
+              pos={[s * 0.62, 2.23, -9.7]}
+              color={l.accent}
+              radius={0.02}
+            />
+            <Block
+              size={[0.18, 0.06, 4.6]}
+              pos={[s * 3.2, 2.02, 0.5]}
+              rot={[0, s * 0.18, 0]}
+              color={l.stripes}
+              radius={0.02}
+            />
+            <Block
+              size={[0.14, 0.06, 3]}
+              pos={[s * 2.4, 2.02, 3.6]}
+              rot={[0, s * 0.35, 0]}
+              color={l.accent}
+              radius={0.02}
+            />
           </group>
         ))}
       </group>
@@ -226,7 +281,14 @@ function Stripes({ model, l }) {
         <Block size={[0.9, 0.08, 3.2]} pos={[0, 3.25, 5.6]} color={l.accent} radius={0.03} />
         <Block size={[0.45, 0.1, 2.2]} pos={[0, 3.3, 5.3]} color={l.noseTip} radius={0.03} />
         {[1, -1].map((s) => (
-          <Block key={s} size={[0.16, 0.06, 4]} pos={[s * 3.0, 2.02, 1.4]} rot={[0, s * 0.2, 0]} color={l.stripes} radius={0.02} />
+          <Block
+            key={s}
+            size={[0.16, 0.06, 4]}
+            pos={[s * 3.0, 2.02, 1.4]}
+            rot={[0, s * 0.2, 0]}
+            color={l.stripes}
+            radius={0.02}
+          />
         ))}
         <Block size={[1.3, 0.06, 1.8]} pos={[0, y, -3.9]} color={l.bodyAlt} radius={0.03} />
       </group>
@@ -237,7 +299,14 @@ function Stripes({ model, l }) {
     <group>
       <Block size={[0.9, 0.06, 1.2]} pos={[0, 2.23, -10.5]} color={l.stripes} radius={0.03} />
       {[1, -1].map((s) => (
-        <Block key={s} size={[0.12, 0.06, 5]} pos={[s * 3.4, 2.02, 0.4]} rot={[0, s * 0.16, 0]} color={l.stripes} radius={0.02} />
+        <Block
+          key={s}
+          size={[0.12, 0.06, 5]}
+          pos={[s * 3.4, 2.02, 0.4]}
+          rot={[0, s * 0.16, 0]}
+          color={l.stripes}
+          radius={0.02}
+        />
       ))}
       <Block size={[0.5, 0.06, 0.5]} pos={[0, 3.25, 7.2]} color={l.accent} radius={0.03} />
     </group>
@@ -246,12 +315,44 @@ function Stripes({ model, l }) {
 
 // ---------- auto completo ----------
 
-const FLOOR = mirror([[1.4, -7.5], [4.6, -4], [4.9, 4.5], [3.4, 9.6], [1.8, 11.2]])
-const NOSE = mirror([[0.35, -15.2], [0.6, -13], [0.85, -10], [1.1, -7]])
-const CHASSIS = mirror([[1.1, -7.3], [1.4, -4.5], [1.55, -1.5], [1.35, 1.5], [0.8, 3.5]])
-const SIDEPOD_R = [[1.2, -3.4], [3.6, -3.4], [4.25, -2.3], [4.2, 0], [3.6, 2.6], [2.5, 5.2], [1.4, 7.4], [1.1, 7.4]]
+const FLOOR = mirror([
+  [1.4, -7.5],
+  [4.6, -4],
+  [4.9, 4.5],
+  [3.4, 9.6],
+  [1.8, 11.2],
+])
+const NOSE = mirror([
+  [0.35, -15.2],
+  [0.6, -13],
+  [0.85, -10],
+  [1.1, -7],
+])
+const CHASSIS = mirror([
+  [1.1, -7.3],
+  [1.4, -4.5],
+  [1.55, -1.5],
+  [1.35, 1.5],
+  [0.8, 3.5],
+])
+const SIDEPOD_R = [
+  [1.2, -3.4],
+  [3.6, -3.4],
+  [4.25, -2.3],
+  [4.2, 0],
+  [3.6, 2.6],
+  [2.5, 5.2],
+  [1.4, 7.4],
+  [1.1, 7.4],
+]
 const SIDEPOD_L = [...SIDEPOD_R].reverse().map(([x, z]) => [-x, z])
-const COVER = mirror([[0.8, -1], [1.25, 1], [1.2, 4], [0.85, 7], [0.45, 10.2]])
+const COVER = mirror([
+  [0.8, -1],
+  [1.25, 1],
+  [1.2, 4],
+  [0.85, 7],
+  [0.45, 10.2],
+])
 
 export function LegoF1Car({ model, spinWheels = false, steer = 0, drsOpen = false }) {
   const l = model.livery
@@ -263,8 +364,15 @@ export function LegoF1Car({ model, spinWheels = false, steer = 0, drsOpen = fals
   useFrame((_, dt) => {
     speed.current = THREE.MathUtils.damp(speed.current, spinWheels ? 12 : 0, 3, dt)
     for (const w of wheels.current) if (w) w.rotation.x -= speed.current * dt
-    for (const f of fronts.current) if (f) f.rotation.y = THREE.MathUtils.damp(f.rotation.y, steer, 5, dt)
-    if (drs.current) drs.current.rotation.x = THREE.MathUtils.damp(drs.current.rotation.x, drsOpen ? 0.9 : 0, 6, dt)
+    for (const f of fronts.current)
+      if (f) f.rotation.y = THREE.MathUtils.damp(f.rotation.y, steer, 5, dt)
+    if (drs.current)
+      drs.current.rotation.x = THREE.MathUtils.damp(
+        drs.current.rotation.x,
+        drsOpen ? 0.9 : 0,
+        6,
+        dt,
+      )
   })
 
   const wheelSpecs = [
@@ -278,7 +386,9 @@ export function LegoF1Car({ model, spinWheels = false, steer = 0, drsOpen = fals
     <group scale={UNIT}>
       <Panel points={FLOOR} height={0.3} y={0.25} color={l.floor} bevel={0.08} rough={0.6} />
       <Panel points={NOSE} height={0.95} y={1.25} color={l.nose} bevel={0.2} />
-      {l.noseTip && <Block size={[0.8, 0.8, 1.4]} pos={[0, 1.65, -14.6]} color={l.noseTip} radius={0.3} />}
+      {l.noseTip && (
+        <Block size={[0.8, 0.8, 1.4]} pos={[0, 1.65, -14.6]} color={l.noseTip} radius={0.3} />
+      )}
       <Panel points={CHASSIS} height={1.85} y={0.55} color={l.body} bevel={0.25} />
       <Panel points={SIDEPOD_R} height={1.45} y={0.55} color={l.body} bevel={0.3} />
       <Panel points={SIDEPOD_L} height={1.45} y={0.55} color={l.body} bevel={0.3} />
@@ -307,7 +417,12 @@ export function LegoF1Car({ model, spinWheels = false, steer = 0, drsOpen = fals
       {[1, -1].map((s) => (
         <group key={`m${s}`}>
           <Rod from={[s * 1.3, 2.3, -3.6]} to={[s * 2.3, 2.7, -3.6]} r={0.07} />
-          <Block size={[0.9, 0.4, 0.25]} pos={[s * 2.55, 2.75, -3.6]} color={l.bodyAlt} radius={0.1} />
+          <Block
+            size={[0.9, 0.4, 0.25]}
+            pos={[s * 2.55, 2.75, -3.6]}
+            color={l.bodyAlt}
+            radius={0.1}
+          />
         </group>
       ))}
 

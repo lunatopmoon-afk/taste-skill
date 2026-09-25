@@ -86,7 +86,8 @@ export default function App() {
       </header>
 
       {/* HERO: la pared con los cuadros en 3D */}
-      <section className="relative h-[100dvh] min-h-[620px] overflow-hidden">
+      {/* svh: altura fija aunque la barra del navegador del celular aparezca o se esconda */}
+      <section className="relative h-[100svh] min-h-[620px] overflow-hidden">
         <Suspense fallback={<div className="absolute inset-0 bg-asphalt" />}>
           <div className="absolute inset-0">
             <GalleryWall
