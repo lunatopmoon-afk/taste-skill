@@ -39,6 +39,7 @@ export function useWallTexture() {
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const span = (t, a, b) => clamp01((t - a) / (b - a))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
+const easeInOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
 
 const REDUCED_MOTION =
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -155,7 +156,13 @@ function CameraRig({ total, spacing, timeline }) {
     // Entrada: la cámara se acerca despacio durante toda la secuencia y tiembla en el estallido
     const t = timeline.current.t
     const push = 1 + 0.22 * (1 - easeOutCubic(span(t, 0, INTRO.framesSet)))
-    const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 7) : 0
+    // mientras los autos se rompen, la cámara se mete hacia ellos (como en el video)
+    const dive =
+      1 -
+      0.12 *
+        easeInOutCubic(span(t, INTRO.burst, INTRO.burst + INTRO.dissolve)) *
+        (1 - easeInOutCubic(span(t, INTRO.reform, INTRO.reformed)))
+    const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 7) * 0.5 : 0
     const land = t > INTRO.integrated ? Math.exp(-(t - INTRO.integrated) * 12) : 0
     const shake = (hit * 0.12 + land * 0.04) * Math.sin(t * 70)
 
@@ -167,7 +174,7 @@ function CameraRig({ total, spacing, timeline }) {
       2.5,
       dt,
     )
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, dist * push, 3, dt)
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, dist * push * dive, 3, dt)
     camera.lookAt(camera.position.x, camera.position.y, 0)
     // La niebla se mide desde la cámara: lo que está detrás de la pared se funde con el negro
     if (scene.fog) {
