@@ -13,6 +13,7 @@ export const FRAME_W = 3.05 // ancho máximo, para separar los cuadros en la par
 export const FRAME_H = 4.3
 const BORDER = 0.07
 const DEPTH = 0.4
+const NEON = 0.07 // grosor del tubo de neón blanco
 const INNER_W = 2.56 // ancho del póster dibujado (modelos sin foto)
 export const INNER_H = FRAME_H - BORDER * 2
 const LED_INSET = 0.075
@@ -610,6 +611,8 @@ export function LedFrame({
   const halo = useMemo(getHaloTexture, [])
   const carRig = useRef()
   const carSpin = useRef()
+  const neonMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
+  useEffect(() => () => neonMat.dispose(), [neonMat])
   const ledMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
   const haloMat = useRef()
   const ledLight = useRef()
@@ -644,6 +647,8 @@ export function LedFrame({
     const k = level.current
 
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)
+    // neón blanco del frente (cuadro panorámico): casi apagado hasta que se prende
+    neonMat.color.setScalar(0.06 + Math.min(k, 1.3) * 1.25)
     if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * Math.min(k, 1.3)
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
@@ -713,6 +718,19 @@ export function LedFrame({
           />
         </mesh>
       )}
+
+      {/* Neón blanco en el frente del marco (cuadro panorámico) */}
+      {model.led.neon &&
+        [
+          [frameW + NEON, NEON, 0, FRAME_H / 2],
+          [frameW + NEON, NEON, 0, -FRAME_H / 2],
+          [NEON, FRAME_H, -frameW / 2, 0],
+          [NEON, FRAME_H, frameW / 2, 0],
+        ].map(([w, h, x, y], i) => (
+          <mesh key={`neon${i}`} position={[x, y, DEPTH + 0.01]} material={neonMat}>
+            <boxGeometry args={[w, h, 0.03]} />
+          </mesh>
+        ))}
 
       {/* Marco negro delgado */}
       {edges.map(([w, h, x, y], i) => (
