@@ -4,7 +4,7 @@ import { Environment, Lightformer } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { LedFrame, FRAME_W, FRAME_H, INNER_H } from './LedFrame.jsx'
-import { IntroCars, INTRO } from './Intro.jsx'
+import { IntroCars, INTRO, LOW_POWER } from './Intro.jsx'
 
 // Pared de la galería. Al entrar corre la secuencia de Intro.jsx: autos reales que caen,
 // estallan en piezas LEGO, se rearman, los cuadros llegan desde el fondo, el LEGO encaja
@@ -64,8 +64,9 @@ function Timeline({ timeline, onDone }) {
       tl.t = FROZEN_T
       return
     }
-    // paso limitado: si el primer cuadro tarda (subida de texturas 4K) no se salta la animación
-    tl.t += Math.min(rawDt, 1 / 30)
+    // tiempo real: aunque un cuadro tarde, la animación sigue a su velocidad (sin cámara lenta
+    // ni tirones). Solo se limitan pausas largas, como la subida inicial de texturas 4K.
+    tl.t += Math.min(rawDt, 0.1)
     if (!fired.current && tl.t >= INTRO.done) {
       fired.current = true
       onDone?.()
@@ -269,7 +270,7 @@ export function GalleryWall({
     <Canvas
       shadows
       frameloop={paused ? 'never' : 'always'}
-      dpr={[1, 2]}
+      dpr={LOW_POWER ? [1, 1.5] : [1, 2]}
       camera={{ position: [0, -0.95, 24], fov: 22 }}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
       onPointerMissed={() => (document.body.style.cursor = '')}
@@ -283,7 +284,7 @@ export function GalleryWall({
         position={[-3, 6, 7]}
         intensity={1.6}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={LOW_POWER ? [1024, 1024] : [2048, 2048]}
         shadow-camera-left={-10}
         shadow-camera-right={10}
         shadow-camera-top={4}
@@ -316,7 +317,7 @@ export function GalleryWall({
         />
       </Environment>
 
-      <EffectComposer multisampling={4}>
+      <EffectComposer multisampling={LOW_POWER ? 0 : 4}>
         <Bloom mipmapBlur luminanceThreshold={1} intensity={1.1} radius={0.7} />
       </EffectComposer>
     </Canvas>
