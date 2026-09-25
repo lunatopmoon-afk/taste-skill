@@ -358,6 +358,7 @@ function PhotoPoster({
   cutoutSrc,
   cutoutMat,
   posterMat,
+  silhouetteMat,
   showCar = true,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
@@ -390,6 +391,10 @@ function PhotoPoster({
       cutoutTex.anisotropy = maxAnisotropy
       cutoutMat.map = cutoutTex
       cutoutMat.needsUpdate = true
+      if (silhouetteMat) {
+        silhouetteMat.map = cutoutTex
+        silhouetteMat.needsUpdate = true
+      }
     }
     if (treadMat) {
       treadMat.map = texture
@@ -412,12 +417,19 @@ function PhotoPoster({
     [width, height, relief, heightMap],
   )
   useEffect(() => () => geometry.dispose(), [geometry])
-  // Cuadro vacío (solo el fondo del póster): se usa en la entrada, antes de que el LEGO encaje
-  if (!showCar && emptyMat) {
+  // Entrada, antes de que el LEGO encaje: la foto original del cuadro con la silueta
+  // negra y nítida del auto (el hueco donde va el LEGO). Nada borroso: el LEGO cae
+  // exactamente sobre esa silueta y la tapa.
+  if (!showCar && posterMat && silhouetteMat) {
     return (
-      <mesh position={[0, 0, 0.002]} material={emptyMat}>
-        <planeGeometry args={[width, height]} />
-      </mesh>
+      <>
+        <mesh position={[0, 0, 0.002]} material={posterMat}>
+          <planeGeometry args={[width, height]} />
+        </mesh>
+        <mesh position={[0, 0, 0.004]} material={silhouetteMat} renderOrder={1}>
+          <planeGeometry args={[width, height]} />
+        </mesh>
+      </>
     )
   }
   // Capas: fondo del póster (plano, sin el auto) + sombra + el LEGO recortado encima, a la
@@ -578,6 +590,19 @@ export function LedFrame({
   )
   useEffect(() => () => cutoutMat.dispose(), [cutoutMat])
   const posterMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
+  // Silueta del auto en negro (el color negro multiplica la textura; queda solo su forma)
+  const silhouetteMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: '#050505',
+        transparent: true,
+        alphaTest: 0.02,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    [],
+  )
+  useEffect(() => () => silhouetteMat.dispose(), [silhouetteMat])
   useEffect(() => () => posterMat.dispose(), [posterMat])
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
@@ -714,6 +739,7 @@ export function LedFrame({
           cutoutSrc={SMALL_SCREEN ? model.cutout : model.cutout4k}
           cutoutMat={cutoutMat}
           posterMat={posterMat}
+          silhouetteMat={silhouetteMat}
           emptyMat={emptyMat}
           showCar={showCar}
         />

@@ -35,10 +35,13 @@ const Z_REAL = 6 // los autos reales flotan mucho más cerca de la cámara
 
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
+// Tablets y celulares (pantalla táctil): menos piezas y material más liviano, para 60 fps
+export const LOW_POWER =
+  SMALL_SCREEN || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
 // Cuadrícula de ladrillos 1x2 sobre cada auto: columnas a lo ancho
 const GRID_COLS = SMALL_SCREEN ? 8 : 12
 // piezas Technic extra (vigas, engranajes…) por cada ladrillo, para variedad
-const EXTRA_RATIO = 0.8
+const EXTRA_RATIO = LOW_POWER ? 0.3 : 0.6
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -267,16 +270,19 @@ function LegoBurst({ cars, timeline }) {
   const meshes = useRef({})
   const material = useMemo(
     () =>
-      new THREE.MeshPhysicalMaterial({
-        // plástico ABS de LEGO: brillante, con reflejo nítido
-        roughness: 0.2,
-        metalness: 0,
-        clearcoat: 0.55,
-        clearcoatRoughness: 0.08,
-        ior: 1.49,
-        specularIntensity: 0.9,
-        envMapIntensity: 1.2,
-      }),
+      LOW_POWER
+        ? // plástico brillante, versión liviana para tablet/celular
+          new THREE.MeshStandardMaterial({ roughness: 0.22, metalness: 0, envMapIntensity: 1.3 })
+        : new THREE.MeshPhysicalMaterial({
+            // plástico ABS de LEGO: brillante, con reflejo nítido
+            roughness: 0.2,
+            metalness: 0,
+            clearcoat: 0.55,
+            clearcoatRoughness: 0.08,
+            ior: 1.49,
+            specularIntensity: 0.9,
+            envMapIntensity: 1.2,
+          }),
     [],
   )
   useEffect(() => () => material.dispose(), [material])
