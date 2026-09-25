@@ -14,7 +14,7 @@ export const FRAME_H = 4.3
 const BORDER = 0.07
 const DEPTH = 0.4
 const INNER_W = 2.56 // ancho del póster dibujado (modelos sin foto)
-const INNER_H = FRAME_H - BORDER * 2
+export const INNER_H = FRAME_H - BORDER * 2
 const LED_INSET = 0.075
 const LED_WIDTH = 0.018
 
@@ -351,11 +351,15 @@ function PhotoPoster({
   wheels,
   treadMat,
   sideMat,
+  emptySrc,
+  emptyMat,
+  showCar = true,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
-  const [texture, heightMap] = useTexture([
+  const [texture, heightMap, emptyTex] = useTexture([
     SMALL_SCREEN && srcSmall ? srcSmall : src,
     relief ?? src,
+    emptySrc ?? src,
   ])
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
@@ -365,17 +369,30 @@ function PhotoPoster({
     material.map = texture
     material.emissiveMap = texture
     material.needsUpdate = true
+    emptyTex.colorSpace = THREE.SRGBColorSpace
+    if (emptyMat) {
+      emptyMat.map = emptyTex
+      emptyMat.needsUpdate = true
+    }
     if (treadMat) {
       treadMat.map = texture
       treadMat.emissiveMap = texture
       treadMat.needsUpdate = true
     }
-  }, [texture, material, treadMat, maxAnisotropy])
+  }, [texture, emptyTex, material, treadMat, emptyMat, maxAnisotropy])
   const geometry = useMemo(
     () => reliefGeometry(width, height, relief ? heightMap.image : null),
     [width, height, relief, heightMap],
   )
   useEffect(() => () => geometry.dispose(), [geometry])
+  // Cuadro vacío (solo el fondo del póster): se usa en la entrada, antes de que el LEGO encaje
+  if (!showCar && emptyMat) {
+    return (
+      <mesh position={[0, 0, 0.002]} material={emptyMat}>
+        <planeGeometry args={[width, height]} />
+      </mesh>
+    )
+  }
   return (
     <>
       <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
@@ -464,6 +481,7 @@ export function LedFrame({
   steer = 0,
   introDelay = 0,
   powered = true,
+  showCar = true,
   ...props
 }) {
   const model = product.model
@@ -505,6 +523,8 @@ export function LedFrame({
       metalness: 0.1,
     })
   }, [model])
+  const emptyMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
+  useEffect(() => () => emptyMat.dispose(), [emptyMat])
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
@@ -548,6 +568,7 @@ export function LedFrame({
     // Casi todo el color viene de la foto; la luz solo sombrea los costados del relieve
     photoMat.emissiveIntensity = glow * 0.92
     photoMat.color.setScalar(glow * 0.22)
+    emptyMat.color.setScalar(glow * 0.95)
     treadMat.emissiveIntensity = glow * 0.92
     treadMat.color.setScalar(glow * 0.22)
     if (glossMat.current) {
@@ -632,6 +653,9 @@ export function LedFrame({
           wheels={model.wheels}
           treadMat={treadMat}
           sideMat={sideMat}
+          emptySrc={model.posterEmpty}
+          emptyMat={emptyMat}
+          showCar={showCar}
         />
       ) : (
         <mesh position={[0, 0, 0.002]} receiveShadow>

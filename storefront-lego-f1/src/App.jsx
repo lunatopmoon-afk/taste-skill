@@ -32,6 +32,9 @@ export default function App() {
   const [active, setActive] = useState(0)
   const [selected, setSelected] = useState(null)
   const [cartOpen, setCartOpen] = useState(false)
+  // Entrada animada del hero: el texto aparece cuando termina
+  const [introDone, setIntroDone] = useState(false)
+  const [skipIntro, setSkipIntro] = useState(false)
   const { cart, busy, error, add, setQuantity } = useCart()
 
   useEffect(() => {
@@ -90,12 +93,27 @@ export default function App() {
               products={products}
               onActiveChange={setActive}
               onSelect={setSelected}
+              onIntroDone={() => setIntroDone(true)}
+              skipIntro={skipIntro}
               paused={Boolean(selected)}
             />
           </div>
         </Suspense>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-asphalt via-asphalt/80 to-transparent px-5 pb-8 pt-24 md:px-10 md:pb-10">
+        {!introDone && (
+          <button
+            onClick={() => setSkipIntro(true)}
+            className="glass absolute bottom-6 right-5 z-10 rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-dim transition hover:text-chalk md:right-10"
+          >
+            Saltar intro
+          </button>
+        )}
+        <motion.div
+          className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-asphalt via-asphalt/80 to-transparent px-5 pb-8 pt-24 md:px-10 md:pb-10"
+          initial={false}
+          animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
               <h1 className="max-w-[16ch] text-4xl font-semibold leading-[1.02] tracking-tighter md:text-6xl">
@@ -134,7 +152,7 @@ export default function App() {
               </ol>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* COLECCIÓN */}

@@ -1,13 +1,14 @@
-import { Suspense, useCallback, useMemo, useRef, useState } from 'react'
+import { Suspense, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
-import { LedFrame, FRAME_W, FRAME_H } from './LedFrame.jsx'
+import { LedFrame, FRAME_W, FRAME_H, INNER_H } from './LedFrame.jsx'
+import { IntroCars, INTRO } from './Intro.jsx'
 
-// Pared de la galería: los cuadros cuelgan sobre una pared oscura texturizada.
-// Al entrar, los cuadros caen uno por uno, se balancean y luego se encienden sus LED.
-// Pasar el cursor inclina el cuadro hacia ti, sube el LED y hace girar las ruedas.
+// Pared de la galería. Al entrar corre la secuencia de Intro.jsx: autos reales que caen,
+// estallan en piezas LEGO, se rearman, los cuadros llegan desde el fondo, el LEGO encaja
+// y se prenden las tres luces a la vez. Luego, pasar el cursor gira el cuadro a los lados.
 
 const GAP = 1.3
 const SPACING = FRAME_W + GAP
@@ -35,6 +36,10 @@ export function useWallTexture() {
   }, [])
 }
 
+const clamp01 = (v) => Math.min(1, Math.max(0, v))
+const span = (t, a, b) => clamp01((t - a) / (b - a))
+const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
+
 const REDUCED_MOTION =
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
@@ -43,104 +48,92 @@ function spacingFor(aspect) {
   return FRAME_W + (aspect < 1 ? 0.3 : GAP)
 }
 
-// Caída de entrada: cada cuadro cae desde arriba, rebota al "engancharse" en el clavo
-// y se balancea hasta quedar quieto. Luego se encienden sus luces.
-const DROP_HEIGHT = 9
-const GRAVITY = 34
-const DROP_START = 0.25
-const DROP_STAGGER = 0.28
-const FALL_TIME = Math.sqrt((2 * DROP_HEIGHT) / GRAVITY)
+// Un solo reloj para toda la entrada (ver Intro.jsx). Con "reducir movimiento" se salta.
+// Para revisar la entrada cuadro a cuadro: ?introT=4.2 congela el reloj en ese segundo
+const FROZEN_T =
+  typeof window !== 'undefined'
+    ? parseFloat(new URLSearchParams(window.location.search).get('introT'))
+    : NaN
 
-function HangingFrame({ product, index, x, onSelect, onHover, onLanded, lightsOn }) {
-  const drop = useRef()
+function Timeline({ timeline, onDone }) {
+  const fired = useRef(false)
+  useFrame((_, rawDt) => {
+    const tl = timeline.current
+    if (!Number.isNaN(FROZEN_T)) {
+      tl.t = FROZEN_T
+      return
+    }
+    // paso limitado: si el primer cuadro tarda (subida de texturas 4K) no se salta la animación
+    tl.t += Math.min(rawDt, 1 / 30)
+    if (!fired.current && tl.t >= INTRO.done) {
+      fired.current = true
+      onDone?.()
+    }
+  })
+  return null
+}
+
+function HangingFrame({ product, index, x, onSelect, onHover, lightsOn, timeline, interactive }) {
+  const arrive = useRef()
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
-  const landed = useRef(false)
-  const sim = useRef({
-    y: REDUCED_MOTION ? 0 : DROP_HEIGHT,
-    vy: 0,
-    rz: 0,
-    vrz: 0,
-    t: 0,
-    done: REDUCED_MOTION,
-  })
-  const startAt = DROP_START + index * DROP_STAGGER
+  const [showCar, setShowCar] = useState(REDUCED_MOTION)
 
   useFrame(({ pointer }, rawDt) => {
     const dt = Math.min(rawDt, 1 / 30)
-    const st = sim.current
-    if (!st.done) {
-      st.t += dt
-      if (st.t > startAt) {
-        st.vy -= GRAVITY * dt
-        st.y += st.vy * dt
-        if (st.y <= 0) {
-          if (!landed.current) {
-            landed.current = true
-            onLanded(index)
-          }
-          const impact = -st.vy
-          st.y = 0
-          st.vy = impact > 1.2 ? impact * 0.22 : 0
-          // el golpe lo hace balancearse, cada cuadro hacia un lado distinto
-          st.vrz += impact * 0.006 * (index % 2 ? 1 : -1)
-        }
-      }
-      // balanceo amortiguado sobre el clavo
-      st.vrz += (-38 * st.rz - 2.4 * st.vrz) * dt
-      st.rz += st.vrz * dt
-      if (st.t > startAt + FALL_TIME + 3 && Math.abs(st.rz) < 0.0005 && st.y === 0) {
-        st.done = true
-        st.rz = 0
-      }
-    }
-    drop.current.position.y = st.y
-    drop.current.rotation.z = st.rz
+    const t = timeline.current.t
+    // Los cuadros llegan desde el fondo oscuro, uno tras otro
+    const p = easeOutCubic(span(t, INTRO.framesIn + index * 0.12, INTRO.framesSet))
+    const a = arrive.current
+    a.visible = p > 0
+    a.position.z = THREE.MathUtils.lerp(-26, 0, p)
+    a.rotation.y = (1 - p) * 0.5 * (index - 1)
+    if (!showCar && t >= INTRO.integrated) setShowCar(true)
 
     const g = ref.current
     // Al pasar el cursor el cuadro gira solo de izquierda a derecha, para ver las llantas
-    const ty = hovered ? pointer.x * 0.28 : 0
-    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, ty, 4, dt)
-    g.position.z = THREE.MathUtils.damp(g.position.z, hovered ? 0.4 : 0, 4, dt)
+    const on = hovered && interactive
+    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, on ? pointer.x * 0.28 : 0, 4, dt)
+    g.position.z = THREE.MathUtils.damp(g.position.z, on ? 0.4 : 0, 4, dt)
   })
 
   return (
-    // El pivote del balanceo está arriba, donde iría el clavo
-    <group position={[x, FRAME_H / 2, 0]}>
-      <group ref={drop}>
-        <group position={[0, -FRAME_H / 2, 0]}>
-          <group
-            ref={ref}
-            onPointerOver={(e) => {
-              e.stopPropagation()
-              setHovered(true)
-              onHover(index)
-              document.body.style.cursor = 'pointer'
-            }}
-            onPointerOut={() => {
-              setHovered(false)
-              document.body.style.cursor = ''
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onSelect(product)
-            }}
-          >
-            <LedFrame
-              product={product}
-              hovered={hovered}
-              powered={lightsOn}
-              introDelay={REDUCED_MOTION ? 0.4 : 0.15}
-            />
-          </group>
+    <group position={[x, 0, 0]}>
+      <group ref={arrive}>
+        <group
+          ref={ref}
+          onPointerOver={(e) => {
+            if (!interactive) return
+            e.stopPropagation()
+            setHovered(true)
+            onHover(index)
+            document.body.style.cursor = 'pointer'
+          }}
+          onPointerOut={() => {
+            setHovered(false)
+            document.body.style.cursor = ''
+          }}
+          onClick={(e) => {
+            if (!interactive) return
+            e.stopPropagation()
+            onSelect(product)
+          }}
+        >
+          <LedFrame
+            product={product}
+            hovered={hovered && interactive}
+            powered={lightsOn}
+            showCar={showCar}
+            introDelay={0}
+          />
         </group>
       </group>
     </group>
   )
 }
 
-function CameraRig({ total, spacing }) {
-  const { camera, size } = useThree()
+function CameraRig({ total, spacing, timeline }) {
+  const { camera, size, scene } = useThree()
   useFrame(({ pointer }, dt) => {
     const aspect = size.width / size.height
     const portrait = aspect < 1
@@ -154,52 +147,104 @@ function CameraRig({ total, spacing }) {
     const visibleH = 2 * dist * Math.tan(fov / 2)
     const baseY = portrait ? -visibleH * 0.16 : -0.95
 
+    // Entrada: la cámara se acerca despacio durante toda la secuencia y tiembla en el estallido
+    const t = timeline.current.t
+    const push = 1 + 0.22 * (1 - easeOutCubic(span(t, 0, INTRO.framesSet)))
+    const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 7) : 0
+    const land = t > INTRO.integrated ? Math.exp(-(t - INTRO.integrated) * 12) : 0
+    const shake = (hit * 0.12 + land * 0.04) * Math.sin(t * 70)
+
     // Cámara de frente y a la altura de los cuadros: todos quedan derechos y en línea
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.12, 2.5, dt)
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, baseY + pointer.y * 0.08, 2.5, dt)
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, dist, 2.5, dt)
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, pointer.x * 0.12 + shake, 2.5, dt)
+    camera.position.y = THREE.MathUtils.damp(
+      camera.position.y,
+      baseY + pointer.y * 0.08 + shake * 0.6,
+      2.5,
+      dt,
+    )
+    camera.position.z = THREE.MathUtils.damp(camera.position.z, dist * push, 3, dt)
     camera.lookAt(camera.position.x, camera.position.y, 0)
+    // La niebla se mide desde la cámara: lo que está detrás de la pared se funde con el negro
+    if (scene.fog) {
+      scene.fog.near = dist * 1.05
+      scene.fog.far = dist * 1.9
+    }
   })
   return null
 }
 
-function Frames({ products, onActiveChange, onSelect }) {
+// La pared negra aparece cuando los cuadros ya llegaron (antes, los cuadros vienen desde atrás)
+function Wall({ timeline }) {
+  const wall = useWallTexture()
+  const ref = useRef()
+  useFrame(() => {
+    ref.current.visible = timeline.current.t >= INTRO.framesSet
+  })
+  return (
+    <mesh ref={ref} position={[0, 0, -0.06]}>
+      <planeGeometry args={[70, 40]} />
+      <meshBasicMaterial color="#0b0b0c" map={wall} toneMapped={false} />
+    </mesh>
+  )
+}
+
+function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   const size = useThree((state) => state.size)
   const spacing = spacingFor(size.width / size.height)
-  // Las luces de los tres cuadros se prenden juntas, cuando todos ya cayeron
-  const landedSet = useRef(new Set())
-  const [lightsOn, setLightsOn] = useState(REDUCED_MOTION)
-  const onLanded = useCallback(
-    (i) => {
-      landedSet.current.add(i)
-      if (landedSet.current.size >= products.length) setLightsOn(true)
-    },
-    [products.length],
-  )
+  const timeline = useRef({ t: REDUCED_MOTION ? INTRO.integrated : 0 })
+  const [lightsOn, setLightsOn] = useState(false)
+  const [interactive, setInteractive] = useState(false)
+  const xs = products.map((_, i) => (i - (products.length - 1) / 2) * spacing)
+  const sizes = products.map((p) => [INNER_H * (p.model.posterAspect ?? 0.6), INNER_H])
+
+  // Las tres luces se prenden juntas cuando los tres LEGO ya encajaron en su cuadro
+  useFrame(() => {
+    if (skip && timeline.current.t < INTRO.integrated) timeline.current.t = INTRO.integrated
+    if (!lightsOn && timeline.current.t >= INTRO.lights) setLightsOn(true)
+  })
+
   return (
     <>
+      <Wall timeline={timeline} />
       <Suspense fallback={null}>
         {products.map((p, i) => (
           <HangingFrame
             key={p.id}
             product={p}
             index={i}
-            x={(i - (products.length - 1) / 2) * spacing}
+            x={xs[i]}
             onHover={onActiveChange}
             onSelect={onSelect}
-            onLanded={onLanded}
             lightsOn={lightsOn}
+            timeline={timeline}
+            interactive={interactive}
           />
         ))}
+        {!REDUCED_MOTION && (
+          <IntroCars products={products} xs={xs} sizes={sizes} timeline={timeline} />
+        )}
+        <Timeline
+          timeline={timeline}
+          onDone={() => {
+            setInteractive(true)
+            onIntroDone?.()
+          }}
+        />
       </Suspense>
-      <CameraRig total={products.length} spacing={spacing} />
+      <CameraRig total={products.length} spacing={spacing} timeline={timeline} />
     </>
   )
 }
 
 // paused: el visor de producto está abierto encima, así que la pared deja de dibujar
-export function GalleryWall({ products, onActiveChange, onSelect, paused = false }) {
-  const wall = useWallTexture()
+export function GalleryWall({
+  products,
+  onActiveChange,
+  onSelect,
+  onIntroDone,
+  skipIntro = false,
+  paused = false,
+}) {
   return (
     <Canvas
       shadows
@@ -210,6 +255,8 @@ export function GalleryWall({ products, onActiveChange, onSelect, paused = false
       onPointerMissed={() => (document.body.style.cursor = '')}
     >
       <color attach="background" args={['#060607']} />
+      {/* Niebla negra: lo que está lejos se funde con la oscuridad (los cuadros "emergen") */}
+      <fog attach="fog" args={['#060607', 30, 55]} />
       <ambientLight intensity={0.18} />
       {/* Luz principal desde arriba a la izquierda: proyecta la sombra del auto sobre el póster */}
       <directionalLight
@@ -225,12 +272,13 @@ export function GalleryWall({ products, onActiveChange, onSelect, paused = false
         shadow-normalBias={0.02}
       />
 
-      <mesh position={[0, 0, -0.06]} receiveShadow>
-        <planeGeometry args={[70, 40]} />
-        <meshBasicMaterial color="#0b0b0c" map={wall} toneMapped={false} />
-      </mesh>
-
-      <Frames products={products} onActiveChange={onActiveChange} onSelect={onSelect} />
+      <Frames
+        products={products}
+        onActiveChange={onActiveChange}
+        onSelect={onSelect}
+        onIntroDone={onIntroDone}
+        skip={skipIntro}
+      />
 
       <Environment resolution={256}>
         <Lightformer intensity={2} position={[0, 4, 4]} scale={[10, 2, 1]} />
