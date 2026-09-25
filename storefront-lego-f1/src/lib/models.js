@@ -19,6 +19,7 @@ export const MODELS = {
     sidePhoto: '/cuadros/mercedes-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/mercedes-lateral-2k.webp',
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
+    shadow: '/cuadros/mercedes-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/mercedes-auto.webp',
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
@@ -67,6 +68,7 @@ export const MODELS = {
     sidePhoto: '/cuadros/redbull-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/redbull-lateral-2k.webp',
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
+    shadow: '/cuadros/redbull-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/redbull-auto.webp',
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
@@ -115,6 +117,7 @@ export const MODELS = {
     sidePhoto: '/cuadros/ferrari-lateral-4k.webp',
     sidePhotoSmall: '/cuadros/ferrari-lateral-2k.webp',
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
+    shadow: '/cuadros/ferrari-sombra.png', // sombra suave del LEGO sobre el póster
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/ferrari-auto.webp',
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)

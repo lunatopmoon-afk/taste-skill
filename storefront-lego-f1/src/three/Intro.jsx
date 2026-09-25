@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { legoGeometries, nearestLegoColor, PIECE_MIX } from './legoPieces.js'
-import { FRAME_H } from './LedFrame.jsx'
+import { FRAME_H, RELIEF_DEPTH } from './LedFrame.jsx'
 
 // Entrada de la página (boceto aprobado):
 //   1. Los tres autos F1 reales, vistos desde arriba (como en el video aprobado), caen
@@ -268,10 +268,14 @@ function LegoBurst({ cars, timeline }) {
   const material = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
-        roughness: 0.24,
+        // plástico ABS de LEGO: brillante, con reflejo nítido
+        roughness: 0.2,
         metalness: 0,
-        clearcoat: 0.3,
-        clearcoatRoughness: 0.12,
+        clearcoat: 0.55,
+        clearcoatRoughness: 0.08,
+        ior: 1.49,
+        specularIntensity: 0.9,
+        envMapIntensity: 1.2,
       }),
     [],
   )
@@ -438,7 +442,8 @@ function LegoCutout({ cutout, x, width, height, timeline }) {
     mat.current.opacity = span(t, INTRO.reformed - 0.2, INTRO.reformed + 0.35)
     // entra al cuadro con golpe seco (aceleración al final)
     const p = easeInCubic(span(t, INTRO.integrate, INTRO.integrated))
-    g.position.z = THREE.MathUtils.lerp(Z_FLOAT, 0.14, p)
+    // se detiene justo a la altura del relieve del cuadro: encaja sin atravesarlo
+    g.position.z = THREE.MathUtils.lerp(Z_FLOAT, RELIEF_DEPTH + 0.004, p)
     // se oscurece al entrar, igual que el cuadro con las luces aún apagadas
     mat.current.color.setScalar(THREE.MathUtils.lerp(1, 0.35, p))
   })

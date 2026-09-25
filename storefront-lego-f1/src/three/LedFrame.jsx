@@ -156,7 +156,8 @@ function usePoster(model) {
 // (mapa de alturas `*-relieve.png`), así las llantas, la carrocería y los alerones
 // sobresalen del fondo. La foto se ve con sus colores reales (emisiva, sin tone mapping)
 // y la luz de la escena sombrea los costados del relieve.
-const RELIEF_DEPTH = 0.26
+// El LEGO se levanta del póster con borde recto (como el modelo real colgado en el cuadro)
+export const RELIEF_DEPTH = 0.22
 // En pantallas chicas: texturas 2K y menos vértices, para que el celular vaya fluido
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
@@ -353,13 +354,15 @@ function PhotoPoster({
   sideMat,
   emptySrc,
   emptyMat,
+  shadowSrc,
   showCar = true,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
-  const [texture, heightMap, emptyTex] = useTexture([
+  const [texture, heightMap, emptyTex, shadowTex] = useTexture([
     SMALL_SCREEN && srcSmall ? srcSmall : src,
     relief ?? src,
     emptySrc ?? src,
+    shadowSrc ?? relief ?? src,
   ])
   useMemo(() => {
     texture.colorSpace = THREE.SRGBColorSpace
@@ -396,6 +399,19 @@ function PhotoPoster({
   return (
     <>
       <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+      {/* Sombra real del LEGO sobre el póster: la luz viene de arriba a la izquierda */}
+      {shadowSrc && (
+        <mesh position={[width * 0.018, -height * 0.014, 0.0035]} renderOrder={1}>
+          <planeGeometry args={[width, height]} />
+          <meshBasicMaterial
+            color="#000000"
+            alphaMap={shadowTex}
+            transparent
+            opacity={0.62}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
       {wheels?.map((box, i) => (
         <Tire
           key={i}
@@ -654,6 +670,7 @@ export function LedFrame({
           treadMat={treadMat}
           sideMat={sideMat}
           emptySrc={model.posterEmpty}
+          shadowSrc={model.shadow}
           emptyMat={emptyMat}
           showCar={showCar}
         />
