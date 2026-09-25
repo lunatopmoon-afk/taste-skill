@@ -34,9 +34,9 @@ const Z_REAL = 6 // los autos reales flotan mucho más cerca de la cámara
 
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
-const PIECES_PER_CAR = SMALL_SCREEN ? 220 : 480
+const PIECES_PER_CAR = SMALL_SCREEN ? 520 : 1300
 // tamaño de 1 stud en la escena (en celular la cámara está más lejos: piezas más grandes)
-const PIECE_SCALE = SMALL_SCREEN ? 0.07 : 0.05
+const PIECE_SCALE = SMALL_SCREEN ? 0.055 : 0.04
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -92,10 +92,10 @@ const dissolveFragment = /* glsl */ `
     vec2 c = (vUv - 0.5) * vec2(uAspect, 1.0);
     vec2 q = vUv * vec2(uAspect, 1.0);
     float field = length(c) / (0.5 * length(vec2(uAspect, 1.0))) * 0.3
-      + (noise(q * 16.0) * 0.55 + noise(q * 41.0) * 0.45) * 0.7;
+      + (noise(q * 34.0) * 0.55 + noise(q * 90.0) * 0.45) * 0.7;
     if (field < uProgress) discard;
     // borde oscuro, como el hueco que deja una pieza al saltar
-    float edge = 1.0 - smoothstep(0.0, 0.035, field - uProgress);
+    float edge = 1.0 - smoothstep(0.0, 0.02, field - uProgress);
     col.rgb *= 1.0 - edge * step(0.001, uProgress) * 0.75;
     gl_FragColor = vec4(col.rgb, col.a * uOpacity);
     #include <colorspace_fragment>
@@ -222,7 +222,10 @@ function LegoBurst({ cars, timeline }) {
         // cada pieza se suelta en un momento distinto mientras el auto se rompe
         const cx = (a.u - 0.5) * aspect
         const cy = a.v - 0.5
-        const field = Math.pow((Math.hypot(cx, cy) / (0.5 * Math.hypot(aspect, 1))) * 0.3 + rand() * 0.7, 1 / 2.2)
+        const field = Math.pow(
+          (Math.hypot(cx, cy) / (0.5 * Math.hypot(aspect, 1))) * 0.3 + rand() * 0.7,
+          1 / 2.2,
+        )
         const dist = Math.hypot(a.x, a.y) + 0.2
         const out = 0.5 + rand() * 1.8
         all.push({
@@ -237,7 +240,7 @@ function LegoBurst({ cars, timeline }) {
           ),
           spin: new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(8),
           target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
-          size: PIECE_SCALE * (0.8 + rand() * 0.55),
+          size: PIECE_SCALE * (0.75 + rand() * 0.6),
           spawn: INTRO.burst + INTRO.dissolve * Math.min(field, 1) * 0.95,
           delay: rand() * 0.55,
         })

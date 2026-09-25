@@ -21,7 +21,7 @@ function studs(cols, rows, top) {
   const parts = []
   for (let i = 0; i < cols; i++)
     for (let j = 0; j < rows; j++) {
-      const s = new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 16)
+      const s = new THREE.CylinderGeometry(STUD_R, STUD_R, STUD_H, 20)
       s.translate(i - (cols - 1) / 2, top + STUD_H / 2, j - (rows - 1) / 2)
       parts.push(prep(s))
     }
@@ -31,6 +31,66 @@ function studs(cols, rows, top) {
 function brick(cols, rows, h = BRICK_H) {
   const body = new RoundedBoxGeometry(cols - 0.02, h, rows - 0.02, 2, 0.05)
   const g = mergeGeometries([prep(body), ...studs(cols, rows, h / 2)])
+  g.computeVertexNormals()
+  return g
+}
+
+// Teja (tile): lisa, sin studs, con una ranura fina en la base
+function tile(cols, rows) {
+  const body = new RoundedBoxGeometry(cols - 0.02, PLATE_H, rows - 0.02, 2, 0.04)
+  const g = prep(body)
+  g.computeVertexNormals()
+  return g
+}
+
+// Plato redondo 1x1 con su stud
+function roundPlate() {
+  const body = new THREE.CylinderGeometry(0.49, 0.49, PLATE_H, 24)
+  const g = mergeGeometries([prep(body), ...studs(1, 1, PLATE_H / 2)])
+  g.computeVertexNormals()
+  return g
+}
+
+// Ladrillo en pendiente 2x2 (slope 45°): studs solo en la fila de atrás
+function slope() {
+  const shape = new THREE.Shape()
+  shape.moveTo(-1, -BRICK_H / 2)
+  shape.lineTo(1, -BRICK_H / 2)
+  shape.lineTo(1, -BRICK_H / 2 + 0.2)
+  shape.lineTo(0, BRICK_H / 2)
+  shape.lineTo(-1, BRICK_H / 2)
+  shape.lineTo(-1, -BRICK_H / 2)
+  const body = new THREE.ExtrudeGeometry(shape, {
+    depth: 1.98,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.03,
+    bevelSegments: 1,
+  })
+  body.translate(0, 0, -0.99)
+  const st = studs(1, 2, BRICK_H / 2).map((g) => g.translate(-0.5, 0, 0))
+  const g = mergeGeometries([prep(body), ...st])
+  g.computeVertexNormals()
+  return g
+}
+
+// Viga Technic en L (3x5) con agujeros
+function lBeam() {
+  const a = technicBeam(5)
+  const b = technicBeam(3).rotateZ(Math.PI / 2)
+  a.translate(0, 0, 0)
+  b.translate(-2, 1, 0)
+  const g = mergeGeometries([a, b])
+  g.computeVertexNormals()
+  return g
+}
+
+// Conector eje-pin: cilindro con collarín
+function connector() {
+  const a = new THREE.CylinderGeometry(0.38, 0.38, 1.9, 20)
+  const b = new THREE.CylinderGeometry(0.44, 0.44, 0.3, 20)
+  const g = mergeGeometries([prep(a), prep(b)])
+  g.rotateZ(Math.PI / 2)
   g.computeVertexNormals()
   return g
 }
@@ -142,6 +202,17 @@ export function legoGeometries() {
   if (cache) return cache
   cache = {
     brick2x4: brick(4, 2),
+    brick1x4: brick(4, 1),
+    brick1x1: brick(1, 1),
+    plate2x2: brick(2, 2, PLATE_H),
+    tile2x2: tile(2, 2),
+    tile1x4: tile(4, 1),
+    round1x1: roundPlate(),
+    slope2x2: slope(),
+    lbeam: lBeam(),
+    beam9: technicBeam(9),
+    beam3: technicBeam(3),
+    connector: connector(),
     brick2x2: brick(2, 2),
     brick1x2: brick(2, 1),
     plate2x4: brick(4, 2, PLATE_H),
@@ -158,17 +229,28 @@ export function legoGeometries() {
 
 // Mezcla de piezas en la explosión (peso relativo)
 export const PIECE_MIX = [
-  ['beam7', 0.14],
-  ['beam5', 0.14],
-  ['brick2x4', 0.12],
-  ['brick2x2', 0.12],
-  ['brick1x2', 0.1],
-  ['plate2x4', 0.1],
-  ['plate1x4', 0.08],
-  ['gear24', 0.05],
-  ['gear12', 0.05],
-  ['axle4', 0.05],
-  ['pin', 0.05],
+  ['beam9', 0.06],
+  ['beam7', 0.07],
+  ['beam5', 0.07],
+  ['beam3', 0.06],
+  ['lbeam', 0.06],
+  ['brick2x4', 0.07],
+  ['brick1x4', 0.06],
+  ['brick2x2', 0.07],
+  ['brick1x2', 0.06],
+  ['brick1x1', 0.04],
+  ['plate2x4', 0.05],
+  ['plate2x2', 0.05],
+  ['plate1x4', 0.04],
+  ['tile2x2', 0.04],
+  ['tile1x4', 0.03],
+  ['round1x1', 0.03],
+  ['slope2x2', 0.04],
+  ['gear24', 0.02],
+  ['gear12', 0.03],
+  ['axle4', 0.03],
+  ['connector', 0.02],
+  ['pin', 0.04],
 ]
 
 // Colores oficiales LEGO: cada pieza toma el color LEGO más cercano al de la foto
