@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Environment, Lightformer } from '@react-three/drei'
+import { Environment, Lightformer, PerformanceMonitor } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { LedFrame, FRAME_W, FRAME_H, INNER_H } from './LedFrame.jsx'
@@ -17,7 +17,6 @@ Object.values(MODELS).forEach((m) =>
     m.posterEmpty,
     m.shadow,
     SMALL ? m.cutout : m.cutout4k,
-    m.cutout,
     m.realCar,
   ]
     .filter(Boolean)
@@ -300,15 +299,32 @@ export function GalleryWall({
   skipIntro = false,
   paused = false,
 }) {
+  // Resolución completa de la pantalla: 3x en teléfono (lienzo pequeño), 2x en iPad, hasta
+  // 2.5x en computadora. Solo si el equipo de verdad no da abasto baja un poco, y vuelve a
+  // subir en cuanto se libera.
+  const maxDpr =
+    typeof window !== 'undefined'
+      ? Math.min(window.devicePixelRatio || 1, SMALL ? 3 : LOW_POWER ? 2 : 2.5)
+      : 1
+  const [dpr, setDpr] = useState(maxDpr)
   return (
     <Canvas
       shadows={!LOW_POWER}
       frameloop={paused ? 'never' : 'always'}
-      dpr={LOW_POWER ? [1, 1.5] : [1, 2]}
+      dpr={dpr}
       camera={{ position: [0, -0.95, 24], fov: 22 }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+      gl={{
+        antialias: true,
+        powerPreference: 'high-performance',
+        toneMapping: THREE.ACESFilmicToneMapping,
+      }}
       onPointerMissed={() => (document.body.style.cursor = '')}
     >
+      <PerformanceMonitor
+        flipflops={2}
+        onDecline={() => setDpr((d) => Math.max(1.5, Math.round((d - 0.25) * 4) / 4))}
+        onIncline={() => setDpr((d) => Math.min(maxDpr, d + 0.25))}
+      />
       <color attach="background" args={['#060607']} />
       {/* Niebla negra: lo que está lejos se funde con la oscuridad (los cuadros "emergen") */}
       <fog attach="fog" args={['#060607', 30, 55]} />

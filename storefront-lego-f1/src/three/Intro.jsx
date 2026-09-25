@@ -502,13 +502,23 @@ function BurstLights({ cars, timeline }) {
 export function IntroCars({ products, xs, sizes, layout, timeline }) {
   const { size, camera } = useThree()
   const list = products.filter((p) => p.model.cutout && p.model.realCar)
-  const textures = useTexture(list.flatMap((p) => [p.model.realCar, p.model.cutout]))
+  // LEGO en 4K (el mismo archivo que usa el cuadro después), 2K solo en celular
+  const textures = useTexture(
+    list.flatMap((p) => [
+      p.model.realCar,
+      SMALL_SCREEN ? p.model.cutout : (p.model.cutout4k ?? p.model.cutout),
+    ]),
+  )
+  const maxAniso = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   useMemo(() => {
     textures.forEach((t) => {
       t.colorSpace = THREE.SRGBColorSpace
-      t.anisotropy = 8
+      t.anisotropy = maxAniso // máxima nitidez al verse en ángulo o reducido
+      t.generateMipmaps = true
+      t.minFilter = THREE.LinearMipmapLinearFilter
+      t.needsUpdate = true
     })
-  }, [textures])
+  }, [textures, maxAniso])
 
   const places = useMemo(
     () =>

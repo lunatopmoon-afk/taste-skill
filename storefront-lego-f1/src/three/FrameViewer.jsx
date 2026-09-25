@@ -47,7 +47,11 @@ export function FrameViewer({
       frameloop={paused ? 'never' : 'always'}
       dpr={[1, 3]}
       camera={{ position: [0, 0, 7.6], fov: 38 }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+      gl={{
+        antialias: true,
+        powerPreference: 'high-performance',
+        toneMapping: THREE.ACESFilmicToneMapping,
+      }}
     >
       <color attach="background" args={['#060607']} />
       <ambientLight intensity={ledOn ? 0.2 : 0.35} />
