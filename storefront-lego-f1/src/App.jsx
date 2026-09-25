@@ -103,16 +103,17 @@ export default function App() {
         {!introDone && (
           <button
             onClick={() => setSkipIntro(true)}
-            className="glass absolute bottom-6 right-5 z-10 rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-dim transition hover:text-chalk md:right-10"
+            className="glass absolute right-5 top-24 z-10 rounded-full px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-dim transition hover:text-chalk md:right-10"
           >
             Saltar intro
           </button>
         )}
         <motion.div
           className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-asphalt via-asphalt/80 to-transparent px-5 pb-8 pt-24 md:px-10 md:pb-10"
-          initial={false}
-          animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          // el texto se ve desde que abre la página; los autos caen en el espacio negro de arriba
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
