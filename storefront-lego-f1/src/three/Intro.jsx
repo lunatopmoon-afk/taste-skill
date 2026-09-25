@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { legoGeometries, nearestLegoColor, PIECE_MIX } from './legoPieces.js'
+import { FRAME_H } from './LedFrame.jsx'
 
 // Entrada de la página (boceto aprobado):
 //   1. Los tres autos F1 reales, vistos desde arriba (como en el video aprobado), caen
@@ -17,16 +18,16 @@ import { legoGeometries, nearestLegoColor, PIECE_MIX } from './legoPieces.js'
 
 export const INTRO = {
   carsIn: 0, // caen los autos reales
-  burst: 1.9, // empiezan a romperse
-  dissolve: 2.5, // cuánto tarda el auto en deshacerse por completo
-  reform: 4.7, // las piezas empiezan a rearmarse
-  reformed: 6.4, // ya son LEGO
-  framesIn: 6.5, // los cuadros llegan desde el fondo
-  framesSet: 8.0,
-  integrate: 8.1, // el LEGO entra al cuadro
-  integrated: 8.65,
-  lights: 8.9, // luces
-  done: 9.6,
+  burst: 1.25, // empiezan a convertirse en LEGO y a romperse
+  dissolve: 1.9, // cuánto tarda el auto en deshacerse por completo
+  reform: 3.35, // las piezas empiezan a rearmarse
+  reformed: 4.55, // ya son LEGO
+  framesIn: 4.6, // los cuadros llegan desde el fondo
+  framesSet: 5.6,
+  integrate: 5.65, // el LEGO entra al cuadro
+  integrated: 6.05,
+  lights: 6.25, // luces
+  done: 6.8,
 }
 
 export const Z_FLOAT = 1.4 // altura a la que flotan los LEGO delante de la pared
@@ -34,9 +35,10 @@ const Z_REAL = 6 // los autos reales flotan mucho más cerca de la cámara
 
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
-const PIECES_PER_CAR = SMALL_SCREEN ? 520 : 1300
-// tamaño de 1 stud en la escena (en celular la cámara está más lejos: piezas más grandes)
-const PIECE_SCALE = SMALL_SCREEN ? 0.055 : 0.04
+// Cuadrícula de ladrillos 1x2 sobre cada auto: columnas a lo ancho
+const GRID_COLS = SMALL_SCREEN ? 8 : 12
+// piezas Technic extra (vigas, engranajes…) por cada ladrillo, para variedad
+const EXTRA_RATIO = 0.8
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -49,19 +51,67 @@ function rng(seed) {
   return () => (s = (s * 16807) % 2147483647) / 2147483647
 }
 
-// Dónde quedan los autos reales: siempre en fila, vistos desde arriba y lo más grandes posible
-function realLayout(products, size, camera, layout) {
-  const aspect = size.width / size.height
+// Dónde caen los autos reales: justo delante de donde luego quedarán los cuadros, en la
+// parte de arriba (el texto de la página queda libre, abajo)
+function realLayout(products, size, camera, layout, xs) {
   const fov = THREE.MathUtils.degToRad(camera.fov)
   const D = layout.dist * 1.1 // la cámara aún está algo alejada en ese momento
+  const k = (D - Z_REAL) / D // escala de perspectiva entre la pared y el plano de los autos
   const visH = 2 * (D - Z_REAL) * Math.tan(fov / 2)
-  const visW = visH * aspect
-  const slot = (visW * 0.96) / products.length
   return products.map((p, i) => {
     const a = p.model.realAspect ?? 0.41
-    const h = Math.min(visH * 0.82, (slot * 0.9) / a)
-    return { x: (i - (products.length - 1) / 2) * slot, y: layout.baseY, w: h * a, h, visH }
+    const h = FRAME_H * 1.1 * k
+    return { x: xs[i] * k, y: layout.baseY * (1 - k), w: h * a, h, visH }
   })
+}
+
+// Cuadrícula de ladrillos del auto (aparejo de ladrillo: filas alternas corridas medio
+// ladrillo). Cada celda guarda en qué momento (0-1) se suelta; la comparten el shader
+// (que abre el hueco) y las piezas (que salen de ese hueco), así coinciden exacto.
+function brickGrid(image, place, seed) {
+  const cols = GRID_COLS
+  const cellU = 1 / cols
+  const cellV = cellU * (place.w / place.h) * 0.5 // ladrillo 1x2: el doble de ancho que de alto
+  const rows = Math.ceil(1 / cellV)
+  const c = document.createElement('canvas')
+  const H = 240
+  const W = Math.round((image.width / image.height) * H)
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(image, 0, 0, W, H)
+  const px = ctx.getImageData(0, 0, W, H).data
+  const at = (u, v) => {
+    const x = Math.min(W - 1, Math.max(0, Math.floor(u * W)))
+    const y = Math.min(H - 1, Math.max(0, Math.floor(v * H)))
+    const j = (y * W + x) * 4
+    return [px[j] / 255, px[j + 1] / 255, px[j + 2] / 255, px[j + 3] / 255]
+  }
+  const texW = cols + 1
+  const data = new Uint8Array(texW * rows * 4).fill(255)
+  const cells = []
+  const rand = rng(seed)
+  const aspect = place.w / place.h
+  for (let r = 0; r < rows; r++) {
+    const shift = r % 2 ? 0.5 : 0
+    for (let col = 0; col < texW; col++) {
+      const u = (col + 0.5 - shift) / cols
+      const v = (r + 0.5) / rows
+      if (u < 0 || u > 1) continue
+      const [cr, cg, cb, ca] = at(u, v)
+      if (ca < 0.45) continue
+      // antes en el centro, luego hacia afuera, con mucho azar
+      const d = Math.hypot((u - 0.5) * aspect, v - 0.5) / (0.5 * Math.hypot(aspect, 1))
+      const release = Math.min(0.97, Math.max(0.03, Math.pow(d * 0.35 + rand() * 0.65, 1.15)))
+      data[(r * texW + col) * 4] = Math.round(release * 255)
+      cells.push({ u, v, release: Math.round(release * 255) / 255, color: [cr, cg, cb] })
+    }
+  }
+  const texture = new THREE.DataTexture(data, texW, rows, THREE.RGBAFormat)
+  texture.magFilter = THREE.NearestFilter
+  texture.minFilter = THREE.NearestFilter
+  texture.needsUpdate = true
+  return { cols, rows, texture, cells, cellW: place.w / cols }
 }
 
 // ---------- 1 y 2. Auto real que se desintegra ----------
@@ -75,34 +125,52 @@ const dissolveVertex = /* glsl */ `
 `
 const dissolveFragment = /* glsl */ `
   uniform sampler2D map;
+  uniform sampler2D uGrid;
+  uniform float uCols;
+  uniform float uRows;
   uniform float uProgress;
   uniform float uOpacity;
   uniform float uAspect;
-  uniform vec3 uGlow;
   varying vec2 vUv;
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p); vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
-  }
   void main() {
     vec4 col = texture2D(map, vUv);
-    // se rompe a trozos por todo el auto (como piezas que se sueltan), algo antes al centro
-    vec2 c = (vUv - 0.5) * vec2(uAspect, 1.0);
-    vec2 q = vUv * vec2(uAspect, 1.0);
-    float field = length(c) / (0.5 * length(vec2(uAspect, 1.0))) * 0.3
-      + (noise(q * 34.0) * 0.55 + noise(q * 90.0) * 0.45) * 0.7;
-    if (field < uProgress) discard;
-    // borde oscuro, como el hueco que deja una pieza al saltar
-    float edge = 1.0 - smoothstep(0.0, 0.02, field - uProgress);
-    col.rgb *= 1.0 - edge * step(0.001, uProgress) * 0.75;
+    // celda de ladrillo (filas alternas corridas medio ladrillo)
+    float vv = 1.0 - vUv.y;
+    float row = floor(vv * uRows);
+    float shift = mod(row, 2.0) * 0.5;
+    float cu = (vUv.x + shift / uCols) * uCols;
+    float cell = floor(cu);
+    float release = texture2D(uGrid, vec2((cell + 0.5) / (uCols + 1.0), 1.0 - (row + 0.5) / uRows)).r;
+    // el ladrillo ya saltó: queda el hueco
+    if (release < uProgress) discard;
+    // antes de soltarse, el auto se va "convirtiendo" en LEGO: aparecen las juntas de los
+    // ladrillos y sus studs, cada vez más marcados
+    float reveal = smoothstep(release - 0.45, release - 0.02, uProgress) * step(0.0001, uProgress);
+    float f = fract(cu);
+    float g = fract(vv * uRows);
+    float seam = smoothstep(0.0, 0.07, min(f, 1.0 - f)) * smoothstep(0.0, 0.14, min(g, 1.0 - g));
+    // biselado: luz arriba-izquierda, sombra abajo-derecha
+    float bevel = ((1.0 - smoothstep(0.0, 0.14, g)) - smoothstep(0.86, 1.0, g)) * 0.14
+                + ((1.0 - smoothstep(0.0, 0.07, f)) - smoothstep(0.93, 1.0, f)) * 0.09;
+    // dos studs por ladrillo (en proporción del ladrillo 2:1)
+    vec2 sp = vec2((f < 0.5 ? f - 0.25 : f - 0.75) * 2.0, g - 0.5);
+    float r = length(sp);
+    float stud = 1.0 - smoothstep(0.3, 0.34, r);
+    float studLight = stud * clamp(-(sp.x + sp.y) * 2.4, -1.0, 1.0);
+    // si el ladrillo mide pocos píxeles en pantalla, el detalle se suaviza (sin serrucho)
+    float pxRow = 1.0 / max(fwidth(vv * uRows), 1e-4);
+    float detail = smoothstep(5.0, 12.0, pxRow);
+    vec3 lego = col.rgb * mix(1.0, 0.3, (1.0 - seam) * mix(0.5, 1.0, detail))
+      + (bevel * (0.35 + col.rgb) + studLight * 0.14) * detail;
+    col.rgb = mix(col.rgb, lego, reveal);
+    // justo antes de saltar, el ladrillo se levanta y se aclara un poco
+    col.rgb *= 1.0 + smoothstep(release - 0.06, release, uProgress) * 0.25;
     gl_FragColor = vec4(col.rgb, col.a * uOpacity);
     #include <colorspace_fragment>
   }
 `
 
-function RealCar({ texture, place, aspect, index, timeline }) {
+function RealCar({ texture, place, aspect, index, grid, timeline }) {
   const ref = useRef()
   const material = useMemo(
     () =>
@@ -112,16 +180,19 @@ function RealCar({ texture, place, aspect, index, timeline }) {
           uProgress: { value: 0 },
           uOpacity: { value: 0 },
           uAspect: { value: aspect },
-          uGlow: { value: new THREE.Color('#ffb347') },
+          uGrid: { value: grid.texture },
+          uCols: { value: grid.cols },
+          uRows: { value: grid.rows },
         },
         vertexShader: dissolveVertex,
         fragmentShader: dissolveFragment,
         transparent: true,
         depthWrite: false,
       }),
-    [texture, aspect],
+    [texture, aspect, grid],
   )
   useEffect(() => () => material.dispose(), [material])
+  useEffect(() => () => grid.texture.dispose(), [grid])
 
   useFrame(() => {
     const t = timeline.current.t
@@ -132,7 +203,7 @@ function RealCar({ texture, place, aspect, index, timeline }) {
     // Cae desde arriba y desde el fondo hacia la pantalla (como en el video), con un
     // pequeño rebote al detenerse
     const start = INTRO.carsIn + index * 0.06
-    const u = span(t, start, start + 1.3)
+    const u = span(t, start, start + 1.0)
     const c1 = 1.25
     const back = 1 + (c1 + 1) * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2) // easeOutBack
     const fall = u >= 1 ? 1 : back
@@ -147,8 +218,8 @@ function RealCar({ texture, place, aspect, index, timeline }) {
     const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 3) : 0
     g.position.x += Math.sin(t * 60 + index) * hit * 0.04
     material.uniforms.uOpacity.value = Math.min(1, u * 2.5)
-    // se rompe poco a poco al principio y del todo al final (el auto sigue visible, como en el video)
-    material.uniforms.uProgress.value = Math.pow(span(t, INTRO.burst, end), 2.2) * 1.05
+    // mismo reloj que las piezas: cada ladrillo se abre cuando su pieza sale disparada
+    material.uniforms.uProgress.value = span(t, INTRO.burst, end)
   })
 
   return (
@@ -209,41 +280,58 @@ function LegoBurst({ cars, timeline }) {
   const pieces = useMemo(() => {
     const all = []
     cars.forEach((car, ci) => {
-      const from = samplePoints(car.real.image, car.place.w, car.place.h, PIECES_PER_CAR, ci + 7)
-      const to = samplePoints(car.lego.image, car.legoW, car.legoH, PIECES_PER_CAR, ci + 31)
+      const { cells, cellW } = car.grid
       const rand = rng(200 + ci)
-      const aspect = car.place.w / car.place.h
-      for (let i = 0; i < PIECES_PER_CAR; i++) {
-        const a = from[i]
+      const extra = Math.round(cells.length * EXTRA_RATIO)
+      const to = samplePoints(car.lego.image, car.legoW, car.legoH, cells.length + extra, ci + 31)
+      const brickScale = cellW / 2 // un ladrillo 1x2 mide 2 studs: ocupa justo su celda
+      const push = (cell, type, size, i, fromBack) => {
+        const x = (cell.u - 0.5) * car.place.w
+        const y = (0.5 - cell.v) * car.place.h
+        const dist = Math.hypot(x, y) + 0.2
+        const out = 0.25 + rand() * 1.1
         const b = to[i]
+        const photo = new THREE.Color().setRGB(...cell.color, THREE.SRGBColorSpace)
+        all.push({
+          type,
+          // al principio conserva el color exacto del auto; en el aire se vuelve color LEGO
+          fromColor: photo,
+          legoColor: nearestLegoColor(...cell.color),
+          toColor: b.color,
+          start: new THREE.Vector3(
+            car.place.x + x,
+            car.place.y + y,
+            Z_REAL + (fromBack ? -0.05 : 0.03),
+          ),
+          vel: new THREE.Vector3(
+            (x / dist) * out + (rand() - 0.5) * 0.7,
+            (y / dist) * out + (rand() - 0.5) * 0.7,
+            2 + rand() * 4.5, // salen disparados hacia la cámara
+          ),
+          spin: new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(7),
+          target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
+          size,
+          spawn: INTRO.burst + cell.release * INTRO.dissolve + (fromBack ? 0.05 : 0),
+          delay: rand() * 0.35,
+        })
+      }
+      // 1. un ladrillo 1x2 (o placa) por celda, del tamaño exacto del hueco que deja
+      cells.forEach((cell, i) =>
+        push(
+          cell,
+          rand() < 0.8 ? 'brick1x2' : 'plate1x4',
+          brickScale * (rand() < 0.8 ? 1 : 0.5),
+          i,
+          false,
+        ),
+      )
+      // 2. piezas Technic que salen de adentro del auto
+      for (let e = 0; e < extra; e++) {
         const r = rand()
         let acc = 0
         const type = PIECE_MIX.find(([, w]) => (acc += w) >= r)?.[0] ?? 'beam7'
-        // cada pieza se suelta en un momento distinto mientras el auto se rompe
-        const cx = (a.u - 0.5) * aspect
-        const cy = a.v - 0.5
-        const field = Math.pow(
-          (Math.hypot(cx, cy) / (0.5 * Math.hypot(aspect, 1))) * 0.3 + rand() * 0.7,
-          1 / 2.2,
-        )
-        const dist = Math.hypot(a.x, a.y) + 0.2
-        const out = 0.5 + rand() * 1.8
-        all.push({
-          type,
-          fromColor: a.color,
-          toColor: b.color,
-          start: new THREE.Vector3(car.place.x + a.x, car.place.y + a.y, Z_REAL + 0.7),
-          vel: new THREE.Vector3(
-            (a.x / dist) * out + (rand() - 0.5) * 1.6,
-            (a.y / dist) * out + (rand() - 0.5) * 1.6,
-            1 + rand() * 4.5, // saltan hacia la cámara: profundidad
-          ),
-          spin: new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).multiplyScalar(8),
-          target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
-          size: PIECE_SCALE * (0.75 + rand() * 0.6),
-          spawn: INTRO.burst + INTRO.dissolve * Math.min(field, 1) * 0.95,
-          delay: rand() * 0.55,
-        })
+        const cell = cells[Math.floor(rand() * cells.length)]
+        push(cell, type, brickScale * (0.45 + rand() * 0.35), cells.length + e, true)
       }
     })
     return all
@@ -279,7 +367,7 @@ function LegoBurst({ cars, timeline }) {
   useFrame(() => {
     const t = timeline.current.t
     const active = t >= INTRO.burst && t < INTRO.reformed + 0.7
-    const recolor = t >= INTRO.reform && t < INTRO.reformed + 0.2
+    const recolor = t >= INTRO.burst && t < INTRO.reformed + 0.2
     const k = 1.5 // frenado del aire
     for (const [type, ids] of Object.entries(byType)) {
       const mesh = meshes.current[type]
@@ -294,27 +382,33 @@ function LegoBurst({ cars, timeline }) {
             .multiplyScalar((1 - Math.exp(-k * tau)) / k)
             .add(pc.start)
         }
-        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 1.1))
+        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 0.85))
+        // el giro arranca suave: al soltarse, el ladrillo sale plano, con los studs a la cámara
+        const turn = (tau) => tau * Math.min(1, tau * 2.2)
         if (u <= 0) {
           flying(t)
           tmp.p.copy(tmp.a)
-          const tau = Math.max(0, t - pc.spawn)
-          tmp.e.set(pc.spin.x * tau, pc.spin.y * tau, pc.spin.z * tau)
+          const tau = turn(Math.max(0, t - pc.spawn))
+          tmp.e.set(Math.PI / 2 + pc.spin.x * tau, pc.spin.y * tau, pc.spin.z * tau)
         } else {
           const tr = INTRO.reform + pc.delay
           flying(tr)
           tmp.p.copy(tmp.a).lerp(pc.target, u)
-          const tau = Math.max(0, tr - pc.spawn) * (1 - u)
-          tmp.e.set(pc.spin.x * tau, pc.spin.y * tau, pc.spin.z * tau)
+          const tau = turn(Math.max(0, tr - pc.spawn)) * (1 - u)
+          tmp.e.set(Math.PI / 2 + pc.spin.x * tau, pc.spin.y * tau, pc.spin.z * tau)
         }
         // nace al pasar el borde incandescente y se funde con la foto al final
-        const born = t >= pc.spawn ? easeOutCubic(span(t, pc.spawn, pc.spawn + 0.18)) : 0
+        const born = t >= pc.spawn ? 1 : 0
         const shrink = 1 - span(t, INTRO.reformed - 0.1, INTRO.reformed + 0.5)
         tmp.s.setScalar(pc.size * born * shrink)
         tmp.q.setFromEuler(tmp.e)
         tmp.m.compose(tmp.p, tmp.q, tmp.s)
         mesh.setMatrixAt(j, tmp.m)
-        if (recolor) mesh.setColorAt(j, tmp.c.copy(pc.fromColor).lerp(pc.toColor, u))
+        if (recolor) {
+          const air = span(t, pc.spawn, pc.spawn + 0.5)
+          tmp.c.copy(pc.fromColor).lerp(pc.legoColor, air).lerp(pc.toColor, u)
+          mesh.setColorAt(j, tmp.c)
+        }
       })
       mesh.instanceMatrix.needsUpdate = true
       if (recolor) mesh.instanceColor.needsUpdate = true
@@ -406,10 +500,17 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
   }, [textures])
 
   const places = useMemo(
-    () => realLayout(list, size, camera, layout),
+    () =>
+      realLayout(
+        list,
+        size,
+        camera,
+        layout,
+        list.map((p) => xs[products.indexOf(p)]),
+      ),
     // se recalcula si cambia el tamaño de la pantalla
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [size.width, size.height, layout.dist, layout.baseY, list.length],
+    [size.width, size.height, layout.dist, layout.baseY, list.length, xs.join(',')],
   )
 
   const cars = useMemo(
@@ -420,6 +521,7 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
           real: textures[i * 2],
           lego: textures[i * 2 + 1],
           place: places[i],
+          grid: brickGrid(textures[i * 2].image, places[i], 11 + i),
           legoX: xs[idx],
           legoW: sizes[idx][0],
           legoH: sizes[idx][1],
@@ -439,6 +541,7 @@ export function IntroCars({ products, xs, sizes, layout, timeline }) {
           place={c.place}
           aspect={c.place.w / c.place.h}
           index={i}
+          grid={c.grid}
           timeline={timeline}
         />
       ))}
