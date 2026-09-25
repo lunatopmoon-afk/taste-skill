@@ -18,8 +18,8 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 
 **Interacciones**
 - **Entrada (unos 9 s, con botón "Saltar intro"):**
-  1. Caen tres autos F1 con pintura brillante sobre negro, con el morro hacia abajo.
-  2. Estallan en piezas LEGO que vuelan hacia la cámara.
+  1. Llegan flotando los tres autos F1 reales (fotos recortadas `<modelo>-real.webp`, escaladas con IA), cerca y grandes.
+  2. Se desintegran con un borde incandescente y estallan en piezas LEGO reales: ladrillos y placas con studs, vigas Technic con agujeros, engranajes, ejes en cruz y pines, en colores oficiales LEGO (`src/three/legoPieces.js`).
   3. Las piezas se rearman: cada una toma el color de la foto real en su punto, y el conjunto se funde con el auto LEGO de la foto, ahora con el morro hacia arriba.
   4. Los cuadros llegan vacíos desde el fondo oscuro y cada LEGO encaja en el suyo.
   5. Se prenden las tres luces a la vez.

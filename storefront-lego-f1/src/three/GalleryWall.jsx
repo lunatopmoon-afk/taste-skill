@@ -132,20 +132,25 @@ function HangingFrame({ product, index, x, onSelect, onHover, lightsOn, timeline
   )
 }
 
+// Distancia y altura de la cámara para que se vean los tres cuadros completos
+function cameraLayout(size, fovDeg, total, spacing) {
+  const aspect = size.width / size.height
+  const portrait = aspect < 1
+  const fov = THREE.MathUtils.degToRad(fovDeg)
+  const fitW = total * spacing + (portrait ? 0.5 : 0.4)
+  const distW = fitW / 2 / Math.tan(fov / 2) / aspect
+  const distH = (FRAME_H + 2.4) / 2 / Math.tan(fov / 2)
+  const dist = Math.max(distW, distH)
+  // En vertical el texto ocupa la parte de abajo: los cuadros suben al tercio superior
+  const visibleH = 2 * dist * Math.tan(fov / 2)
+  const baseY = portrait ? -visibleH * 0.16 : -0.95
+  return { dist, baseY }
+}
+
 function CameraRig({ total, spacing, timeline }) {
   const { camera, size, scene } = useThree()
   useFrame(({ pointer }, dt) => {
-    const aspect = size.width / size.height
-    const portrait = aspect < 1
-    const fov = THREE.MathUtils.degToRad(camera.fov)
-    // Siempre se ven los tres cuadros completos, también en el celular
-    const fitW = total * spacing + (portrait ? 0.5 : 0.4)
-    const distW = fitW / 2 / Math.tan(fov / 2) / aspect
-    const distH = (FRAME_H + 2.4) / 2 / Math.tan(fov / 2)
-    const dist = Math.max(distW, distH)
-    // En vertical el texto ocupa la parte de abajo: los cuadros suben al tercio superior
-    const visibleH = 2 * dist * Math.tan(fov / 2)
-    const baseY = portrait ? -visibleH * 0.16 : -0.95
+    const { dist, baseY } = cameraLayout(size, camera.fov, total, spacing)
 
     // Entrada: la cámara se acerca despacio durante toda la secuencia y tiembla en el estallido
     const t = timeline.current.t
@@ -190,7 +195,9 @@ function Wall({ timeline }) {
 
 function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   const size = useThree((state) => state.size)
+  const fov = useThree((state) => state.camera.fov)
   const spacing = spacingFor(size.width / size.height)
+  const layout = cameraLayout(size, fov, products.length, spacing)
   const timeline = useRef({ t: REDUCED_MOTION ? INTRO.integrated : 0 })
   const [lightsOn, setLightsOn] = useState(false)
   const [interactive, setInteractive] = useState(false)
@@ -221,7 +228,13 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
           />
         ))}
         {!REDUCED_MOTION && (
-          <IntroCars products={products} xs={xs} sizes={sizes} timeline={timeline} />
+          <IntroCars
+            products={products}
+            xs={xs}
+            sizes={sizes}
+            layout={layout}
+            timeline={timeline}
+          />
         )}
         <Timeline
           timeline={timeline}
