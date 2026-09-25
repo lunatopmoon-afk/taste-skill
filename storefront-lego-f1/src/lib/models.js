@@ -21,9 +21,9 @@ export const MODELS = {
     relief: '/cuadros/mercedes-relieve.png', // mapa de alturas: blanco = sobresale más
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/mercedes-auto.webp',
-    // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
+    // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/mercedes-real.webp',
-    realAspect: 0.4104,
+    realAspect: 0.3571,
     posterEmpty: '/cuadros/mercedes-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
@@ -69,9 +69,9 @@ export const MODELS = {
     relief: '/cuadros/redbull-relieve.png', // mapa de alturas: blanco = sobresale más
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/redbull-auto.webp',
-    // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
+    // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/redbull-real.webp',
-    realAspect: 0.4217,
+    realAspect: 0.365,
     posterEmpty: '/cuadros/redbull-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
@@ -117,9 +117,9 @@ export const MODELS = {
     relief: '/cuadros/ferrari-relieve.png', // mapa de alturas: blanco = sobresale más
     // Entrada: auto LEGO recortado (con transparencia) y póster sin el auto
     cutout: '/cuadros/ferrari-auto.webp',
-    // Entrada: foto del auto F1 real recortada (con transparencia, escalada con IA)
+    // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/ferrari-real.webp',
-    realAspect: 0.4175,
+    realAspect: 0.3736,
     posterEmpty: '/cuadros/ferrari-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
     wheels: [
