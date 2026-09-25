@@ -93,7 +93,17 @@ function Timeline({ timeline, onDone }) {
   return null
 }
 
-function HangingFrame({ product, index, x, onSelect, onHover, lightsOn, timeline, interactive }) {
+function HangingFrame({
+  product,
+  index,
+  x,
+  onSelect,
+  onHover,
+  lightsOn,
+  light,
+  timeline,
+  interactive,
+}) {
   const arrive = useRef()
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
@@ -141,8 +151,9 @@ function HangingFrame({ product, index, x, onSelect, onHover, lightsOn, timeline
         >
           <LedFrame
             product={product}
-            hovered={hovered && interactive}
+            hovered={hovered && interactive && !LOW_POWER}
             powered={lightsOn}
+            lightRef={light}
             showCar={showCar}
             introDelay={0}
           />
@@ -230,8 +241,12 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   const xs = products.map((_, i) => (i - (products.length - 1) / 2) * spacing)
   const sizes = products.map((p) => [INNER_H * (p.model.posterAspect ?? 0.6), INNER_H])
 
-  // Las tres luces se prenden juntas cuando los tres LEGO ya encajaron en su cuadro
+  // Las tres luces se prenden juntas cuando los tres LEGO ya encajaron en su cuadro:
+  // una sola subida suave de medio segundo, calculada del reloj de la entrada (no oscila)
+  const light = useMemo(() => ({ current: 0 }), [])
   useFrame(() => {
+    const p = Math.min(1, Math.max(0, (timeline.current.t - INTRO.lights) / 0.5))
+    light.current = p * p * (3 - 2 * p)
     if (skip && timeline.current.t < INTRO.integrated) timeline.current.t = INTRO.integrated
     if (!lightsOn && timeline.current.t >= INTRO.lights) setLightsOn(true)
   })
@@ -249,6 +264,7 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
             onHover={onActiveChange}
             onSelect={onSelect}
             lightsOn={lightsOn}
+            light={light}
             timeline={timeline}
             interactive={interactive}
           />
@@ -335,9 +351,12 @@ export function GalleryWall({
         />
       </Environment>
 
-      <EffectComposer multisampling={LOW_POWER ? 0 : 4}>
-        <Bloom mipmapBlur luminanceThreshold={1} intensity={1.1} radius={0.7} />
-      </EffectComposer>
+      {/* En teléfono/tablet sin bloom: el LED queda justo en el umbral y parpadeaba */}
+      {!LOW_POWER && (
+        <EffectComposer multisampling={4}>
+          <Bloom mipmapBlur luminanceThreshold={1} intensity={1.1} radius={0.7} />
+        </EffectComposer>
+      )}
     </Canvas>
   )
 }

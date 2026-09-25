@@ -534,6 +534,7 @@ export function LedFrame({
   steer = 0,
   introDelay = 0,
   powered = true,
+  lightRef = null,
   showCar = true,
   ...props
 }) {
@@ -635,7 +636,10 @@ export function LedFrame({
     const t = powered ? clock.elapsedTime - start.current - introDelay : -1
     const target = ledOn ? (hovered ? 1.3 : 1) : 0
     // se encienden con una subida suave (sin destellos ni parpadeo)
-    if (t < 0) level.current = 0
+    if (lightRef) {
+      // encendido marcado por la animación de entrada: se prende una sola vez y queda fijo
+      level.current = lightRef.current * (ledOn ? (hovered ? 1.3 : 1) : 0)
+    } else if (t < 0) level.current = 0
     else level.current = THREE.MathUtils.damp(level.current, target, 3, Math.min(dt, 1 / 30))
     const k = level.current
 
