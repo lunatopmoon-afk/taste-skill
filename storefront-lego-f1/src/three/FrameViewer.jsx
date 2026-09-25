@@ -80,14 +80,17 @@ export function FrameViewer({
               onToggleOpen()
             }}
           >
-            <SteeringFrame
-              product={product}
-              finish={finish}
-              open={open}
-              hovered={open}
-              ledOn={ledOn}
-              drsOpen={drsOpen}
-            />
+            {/* los cuadros panorámicos se achican para caber completos en el visor */}
+            <group scale={product.model.layout === 'wide' ? 0.42 : 1}>
+              <SteeringFrame
+                product={product}
+                finish={finish}
+                open={open}
+                hovered={open}
+                ledOn={ledOn}
+                drsOpen={drsOpen}
+              />
+            </group>
           </group>
         </Turntable>
       </Suspense>

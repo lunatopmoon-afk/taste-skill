@@ -32,4 +32,5 @@ export const DEMO_PRODUCTS = [
   demo('mercedes', '01', 'Mercedes-AMG F1 W14 E Performance', MODELS.mercedes.blurb, 0),
   demo('redbull', '02', 'Oracle Red Bull Racing RB-20', MODELS.redbull.blurb, 0),
   demo('ferrari', '03', 'Ferrari SF-24', MODELS.ferrari.blurb, 0),
+  demo('parrilla', '04', 'Lights Out Legends Live', MODELS.parrilla.blurb, 0),
 ]

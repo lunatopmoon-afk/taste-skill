@@ -7,6 +7,10 @@ import { useCart } from './lib/useCart.js'
 import { ProductModal } from './components/ProductModal.jsx'
 import { CartDrawer } from './components/CartDrawer.jsx'
 
+const GridShowcase = lazy(() =>
+  import('./three/GridShowcase.jsx').then((m) => ({ default: m.GridShowcase })),
+)
+
 const GalleryWall = lazy(() =>
   import('./three/GalleryWall.jsx').then((m) => ({ default: m.GalleryWall })),
 )
@@ -56,6 +60,9 @@ export default function App() {
   )
 
   const current = products[active] ?? products[0]
+  // Los cuadros verticales van en la pared del inicio; el panorámico tiene su propia sección
+  const heroProducts = products.filter((p) => p.model.layout !== 'wide')
+  const wideProduct = products.find((p) => p.model.layout === 'wide')
 
   return (
     <div className="min-h-[100dvh]">
@@ -66,6 +73,9 @@ export default function App() {
         <nav className="flex items-center gap-6 text-sm">
           <a href="#coleccion" className="hidden text-dim transition hover:text-chalk sm:block">
             Colección
+          </a>
+          <a href="#parrilla" className="hidden text-dim transition hover:text-chalk sm:block">
+            Parrilla
           </a>
           <a href="#detalles" className="hidden text-dim transition hover:text-chalk sm:block">
             Detalles
@@ -91,7 +101,7 @@ export default function App() {
         <Suspense fallback={<div className="absolute inset-0 bg-asphalt" />}>
           <div className="absolute inset-0">
             <GalleryWall
-              products={products}
+              products={heroProducts}
               onActiveChange={setActive}
               onSelect={setSelected}
               onIntroDone={() => setIntroDone(true)}
@@ -156,6 +166,26 @@ export default function App() {
           </div>
         </motion.div>
       </section>
+
+      {/* PARRILLA COMPLETA: cuadro panorámico con los 12 autos */}
+      {wideProduct && (
+        <section id="parrilla" className="relative pt-20 md:pt-28">
+          <div className="gold-rule absolute inset-x-0 top-0" />
+          <div className="mx-auto max-w-[1400px] px-5 md:px-10">
+            <p className="font-mono text-xs uppercase tracking-widest text-signal">Nuevo</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tighter md:text-5xl">
+              La <span className="gold-text">parrilla completa</span>
+            </h2>
+            <p className="mt-3 max-w-[60ch] text-[15px] leading-relaxed text-dim">
+              {wideProduct.title}: los 12 autos de la temporada en un solo cuadro, cada uno sobre la
+              base de su equipo. Señala un auto para ver de qué equipo es.
+            </p>
+          </div>
+          <Suspense fallback={<div className="h-[62svh] md:h-[78svh]" />}>
+            <GridShowcase product={wideProduct} onOpen={setSelected} paused={Boolean(selected)} />
+          </Suspense>
+        </section>
+      )}
 
       {/* COLECCIÓN */}
       <section id="coleccion" className="mx-auto max-w-[1400px] px-5 py-24 md:px-10 md:py-32">
