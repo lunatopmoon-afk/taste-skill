@@ -43,9 +43,13 @@ export default function App() {
 
   useEffect(() => {
     fetchCatalog()
-      .then(({ shopName: name, products: list }) => {
+      .then(({ shopName: name, products: list, empty }) => {
         setProducts(list)
         if (name) setShopName(name)
+        if (empty)
+          setLoadError(
+            'conectado, pero no hay productos publicados en el canal Headless (Shopify → Productos → Publicación)',
+          )
       })
       .catch((e) => setLoadError(e.message))
   }, [])
@@ -199,7 +203,7 @@ export default function App() {
           </h2>
           {!isShopifyConfigured && (
             <p className="font-mono text-xs uppercase tracking-widest text-dim">
-              Catálogo de muestra
+              Catálogo de muestra · Shopify sin conectar
             </p>
           )}
           {loadError && (
