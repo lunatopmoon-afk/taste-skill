@@ -30,12 +30,7 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
   - **Vista lateral:** el cuadro 3D gira y se funde con **la foto real de costado**, en 4K. Esa foto se retocó para que los tres queden iguales: sin línea de luz interior, marco negro y la misma luz cálida en la pared. Si mueves el cursor encima, se inclina un poco; con un clic se amplía.
   - **LED encendido/apagado.**
   - **Fotos reales**, para ampliarlas.
-- **La parrilla completa (4.º producto, "Lights Out Legends Live"):** sección propia debajo del inicio (`src/three/GridShowcase.jsx`). Al llegar con el scroll corre una carrera 3D de unos 7 s (`src/three/GridRace.jsx`), con botón "Saltar":
-  1. De noche, con la cámara al ras de la pista, los 12 autos F1 LEGO a tamaño real (con studs y los colores de cada equipo, en `src/lib/gridTeams.js`) pasan a toda velocidad rozando la cámara: uno por la derecha, uno por la izquierda, dos del centro que se cruzan, cada vez más rápido, con chispas y estelas de luz.
-  2. Cuando pasaron todos, explota una gran nube de piezas LEGO con un destello.
-  3. Bajo el destello aparece el cuadro, tal como es en la realidad: completo con las 12 bases, marco negro profundo y tira LED blanca cálida en el borde interior. Cada auto sobresale en 3D con su silueta.
-
-  Al terminar, el botón "Ver la carrera" la repite. Para revisar un momento exacto, agrega `?raceT=2.5` a la dirección. Con "reducir movimiento" activado, se muestra directo el cuadro. Al señalar o tocar un auto del cuadro aparece su equipo (de izquierda a derecha: Ferrari, McLaren, Red Bull, Mercedes, Aston Martin, Alpine, Haas, Racing Bulls, Williams, Kick Sauber, APXGP y Audi). En el celular se recorre deslizando de lado. En Shopify se reconoce con la etiqueta `modelo:parrilla` o si el título incluye "Lights Out" / "Legends".
+- **La parrilla completa (4.º producto, "Lights Out Legends Live"):** cuadro panorámico con los 12 autos, en su propia sección debajo del inicio (`src/three/GridShowcase.jsx`), sin animación. Muestra el cuadro tal como es en la realidad: completo con las 12 bases, marco negro profundo y tira LED blanca cálida escondida en el borde interior, que ilumina las paredes internas del marco y el fondo pegado al borde. Se ve completo en cualquier pantalla, también en celular o iPad en vertical, sin deslizar. Cada auto sobresale en 3D con su silueta. En computadora, con el cursor la vista se corre apenas de lado para que se note el relieve. Al señalar o tocar un auto aparece su equipo (lista en `cars` de `src/lib/models.js`, de izquierda a derecha: Ferrari, McLaren, Red Bull, Mercedes, Aston Martin, Alpine, Haas, Racing Bulls, Williams, Kick Sauber, APXGP y Audi). En Shopify se reconoce con la etiqueta `modelo:parrilla` o si el título incluye "Lights Out" / "Legends".
 - **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
 - **En el móvil:** se ven los tres cuadros en fila.
 
@@ -122,8 +117,6 @@ src/
   three/LedFrame.jsx    Cuadro: marco negro, póster, línea LED y retroiluminación
   three/GalleryWall.jsx Pared de galería del inicio
   three/FrameViewer.jsx Visor 3D del producto
-  three/GridShowcase.jsx Sección de la parrilla (carrera + cuadro panorámico)
-  three/GridRace.jsx    Carrera de los 12 autos LEGO y explosión de piezas
   components/           Modal del producto y carrito
 ```
 

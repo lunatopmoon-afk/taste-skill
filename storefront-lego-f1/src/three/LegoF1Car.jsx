@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
 import * as THREE from 'three'
@@ -354,73 +354,8 @@ const COVER = mirror([
   [0.45, 10.2],
 ])
 
-
-// Studs LEGO sobre las superficies planas de arriba (pontones, morro y cubierta del motor):
-// así el auto se lee como construido con ladrillos. Un solo InstancedMesh por auto.
-const STUD_PITCH = 0.8
-function inside([x, z], poly) {
-  let hit = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, zi] = poly[i]
-    const [xj, zj] = poly[j]
-    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) hit = !hit
-  }
-  return hit
-}
-function studSpots(poly, y, margin = 0.45) {
-  const xs = poly.map((p) => p[0])
-  const zs = poly.map((p) => p[1])
-  const out = []
-  for (let x = Math.min(...xs); x <= Math.max(...xs); x += STUD_PITCH) {
-    for (let z = Math.min(...zs); z <= Math.max(...zs); z += STUD_PITCH) {
-      const ok = [
-        [x, z],
-        [x + margin, z],
-        [x - margin, z],
-        [x, z + margin],
-        [x, z - margin],
-      ].every((q) => inside(q, poly))
-      if (ok) out.push([x, y, z])
-    }
-  }
-  return out
-}
-let studGeo
-function Studs({ spots, color }) {
-  const ref = useRef()
-  if (!studGeo) studGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.17, 14).translate(0, 0.085, 0)
-  useLayoutEffect(() => {
-    const m = new THREE.Matrix4()
-    spots.forEach((p, i) => ref.current.setMatrixAt(i, m.makeTranslation(...p)))
-    ref.current.instanceMatrix.needsUpdate = true
-  }, [spots])
-  return (
-    <instancedMesh ref={ref} args={[studGeo, null, spots.length]} castShadow>
-      <meshStandardMaterial color={color} roughness={0.32} metalness={0.05} />
-    </instancedMesh>
-  )
-}
-
-export function LegoF1Car({
-  model,
-  spinWheels = false,
-  steer = 0,
-  drsOpen = false,
-  studs = false,
-}) {
+export function LegoF1Car({ model, spinWheels = false, steer = 0, drsOpen = false }) {
   const l = model.livery
-  const studGroups = useMemo(
-    () =>
-      studs
-        ? [
-            [studSpots(SIDEPOD_R, 2.0), l.body],
-            [studSpots(SIDEPOD_L, 2.0), l.body],
-            [studSpots(NOSE, 2.2, 0.3), l.nose],
-            [studSpots(COVER, 3.2, 0.3), l.body],
-          ].filter(([spots]) => spots.length)
-        : [],
-    [studs, l],
-  )
   const wheels = useRef([])
   const fronts = useRef([])
   const drs = useRef()
@@ -491,9 +426,6 @@ export function LegoF1Car({
         </group>
       ))}
 
-      {studGroups.map(([spots, color], i) => (
-        <Studs key={i} spots={spots} color={color} />
-      ))}
       <FrontWing l={l} />
       <RearWing l={l} drsRef={drs} />
       <Engine kind={model.engine} l={l} />
