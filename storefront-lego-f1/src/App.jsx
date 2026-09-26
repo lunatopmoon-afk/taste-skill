@@ -66,7 +66,7 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh]">
-      <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between px-5 py-4 md:px-10">
+      <header className="fixed inset-x-0 top-0 z-30 flex items-center justify-between bg-gradient-to-b from-[#060607] via-[#060607]/85 to-transparent px-5 py-4 md:px-10">
         <a href="#" className="font-mono text-sm font-medium uppercase tracking-[0.3em]">
           {shopName}
         </a>
@@ -219,11 +219,11 @@ export default function App() {
             >
               <button
                 onClick={() => setSelected(p)}
-                className="group grid w-full grid-cols-[auto_1fr_auto] items-center gap-5 py-6 text-left md:grid-cols-[80px_140px_1fr_auto_auto] md:gap-8"
+                className="group grid w-full grid-cols-[92px_1fr_auto] items-center gap-4 py-6 text-left sm:grid-cols-[auto_110px_1fr_auto] sm:gap-5 md:grid-cols-[80px_140px_1fr_auto_auto] md:gap-8"
               >
-                <span className="font-mono text-sm text-dim">{p.number}</span>
+                <span className="hidden font-mono text-sm text-dim sm:block">{p.number}</span>
                 <div
-                  className="hidden aspect-[4/5] w-full overflow-hidden rounded-lg border border-line shadow-[0_18px_40px_-18px_rgba(228,192,126,0.45)] transition duration-500 group-hover:border-signal/60 group-hover:shadow-[0_22px_50px_-14px_rgba(228,192,126,0.7)] md:block"
+                  className="aspect-[4/5] w-full overflow-hidden rounded-lg border border-line shadow-[0_18px_40px_-18px_rgba(228,192,126,0.45)] transition duration-500 group-hover:border-signal/60 group-hover:shadow-[0_22px_50px_-14px_rgba(228,192,126,0.7)]"
                   style={{
                     background: `radial-gradient(circle at 50% 40%, ${p.model.backdrop.center}, ${p.model.backdrop.edge})`,
                   }}
@@ -233,12 +233,14 @@ export default function App() {
                       src={p.image}
                       alt={p.title}
                       loading="lazy"
-                      className="size-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                      className={`size-full transition duration-700 group-hover:scale-[1.04] ${
+                        p.model.layout === 'wide' ? 'object-contain' : 'object-cover'
+                      }`}
                     />
                   )}
                 </div>
                 <div>
-                  <p className="text-2xl font-semibold tracking-tight transition group-hover:translate-x-1 md:text-3xl">
+                  <p className="text-xl font-semibold leading-tight tracking-tight transition group-hover:translate-x-1 sm:text-2xl md:text-3xl">
                     {p.title}
                   </p>
                   <p className="mt-1 line-clamp-2 max-w-[60ch] text-sm text-dim">{p.description}</p>
