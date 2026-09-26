@@ -523,6 +523,37 @@ function getHaloTexture() {
   return haloTexture
 }
 
+// Luz LED interior (cuadro panorámico real): la tira va escondida detrás del borde del marco
+// y baña de luz el fondo pegado al borde; se apaga rápido hacia el centro.
+let lipTexture
+function getLipTexture() {
+  if (lipTexture) return lipTexture
+  const W = 1024
+  const H = 384
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')
+  const img = ctx.createImageData(W, H)
+  const reach = H * 0.13
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      // distancia al borde en píxeles "verticales" (la textura se estira a lo ancho)
+      const dx = Math.min(x + 0.5, W - x - 0.5) * (H / W) * 2.73
+      const dy = Math.min(y + 0.5, H - y - 0.5)
+      const d = Math.min(dx, dy)
+      const a = 0.9 * Math.exp(-d / (reach * 0.18)) + 0.35 * Math.exp(-d / reach)
+      const i = (y * W + x) * 4
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255
+      img.data[i + 3] = Math.round(Math.min(1, a) * 255)
+    }
+  }
+  ctx.putImageData(img, 0, 0)
+  lipTexture = new THREE.CanvasTexture(c)
+  lipTexture.colorSpace = THREE.SRGBColorSpace
+  return lipTexture
+}
+
 // ---------- cuadro ----------
 
 export function LedFrame({
@@ -609,6 +640,55 @@ export function LedFrame({
   const gloss = useMemo(getGlossTexture, [])
   const glossMat = useRef()
   const halo = useMemo(getHaloTexture, [])
+  const lip = useMemo(() => (model.led.lip ? getLipTexture() : null), [model])
+  const lipMat = useRef()
+  const lipWallMat = useMemo(
+    () =>
+      model.led.lip
+        ? new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            toneMapped: false,
+            side: THREE.DoubleSide,
+          })
+        : null,
+    [model],
+  )
+  const lipWallGeo = useMemo(() => {
+    if (!model.led.lip) return null
+    // 4 paredes; cada una con el borde de atrás (z = 0) claro y el de adelante oscuro
+    // un poco hacia adentro de las caras del marco, para que no se peleen al dibujarse
+    const hw = (INNER_H * model.posterAspect) / 2 - 0.004
+    const hh = INNER_H / 2 - 0.004
+    const pos = []
+    const col = []
+    const corners = [
+      [-hw, hh, hw, hh],
+      [-hw, -hh, hw, -hh],
+      [-hw, -hh, -hw, hh],
+      [hw, -hh, hw, hh],
+    ]
+    for (const [x0, y0, x1, y1] of corners) {
+      const quad = [
+        [x0, y0, 0.001],
+        [x1, y1, 0.001],
+        [x1, y1, DEPTH],
+        [x0, y0, 0.001],
+        [x1, y1, DEPTH],
+        [x0, y0, DEPTH],
+      ]
+      for (const [x, y, z] of quad) {
+        pos.push(x, y, z)
+        const v = z < 0.01 ? 0.6 : 0.05
+        col.push(v, v, v)
+      }
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+    return g
+  }, [model])
+  useEffect(() => () => lipWallGeo?.dispose(), [lipWallGeo])
+  useEffect(() => () => lipWallMat?.dispose(), [lipWallMat])
   const carRig = useRef()
   const carSpin = useRef()
   const neonMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
@@ -627,6 +707,10 @@ export function LedFrame({
       sideMat.dispose()
     },
     [ledMat, photoMat, treadMat, sideMat],
+  )
+  const neonTint = useMemo(
+    () => new THREE.Color(model.led.lip ?? model.led.neon ?? '#ffffff'),
+    [model],
   )
   const borderColor = useMemo(() => new THREE.Color(model.led.border ?? '#000000'), [model])
 
@@ -648,7 +732,9 @@ export function LedFrame({
 
     ledMat.color.copy(borderColor).multiplyScalar(0.25 + k * 2.6)
     // neón blanco del frente (cuadro panorámico): casi apagado hasta que se prende
-    neonMat.color.setScalar(0.06 + Math.min(k, 1.3) * 1.25)
+    neonMat.color.copy(neonTint).multiplyScalar(0.06 + Math.min(k, 1.3) * 1.25)
+    if (lipMat.current) lipMat.current.opacity = Math.min(k, 1.3) * 0.25
+    if (lipWallMat) lipWallMat.color.copy(neonTint).multiplyScalar(0.05 + Math.min(k, 1.3) * 0.95)
     if (haloMat.current) haloMat.current.opacity = model.led.haloStrength * Math.min(k, 1.3)
     if (ledLight.current) ledLight.current.intensity = k * 1.1
     // La foto "se enciende" con el LED; al pasar el cursor brilla un poco más
@@ -731,6 +817,27 @@ export function LedFrame({
             <boxGeometry args={[w, h, 0.03]} />
           </mesh>
         ))}
+
+      {/* LED interior: filo de luz en el borde interno del marco y su luz sobre el fondo */}
+      {model.led.lip && (
+        <group>
+          <mesh position={[0, 0, 0.004]} renderOrder={1}>
+            <planeGeometry args={[innerW, innerH]} />
+            <meshBasicMaterial
+              ref={lipMat}
+              map={lip}
+              color={model.led.lip}
+              transparent
+              opacity={0}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+          {/* paredes internas del marco iluminadas: más luz atrás, pegado al fondo */}
+          <mesh geometry={lipWallGeo} material={lipWallMat} />
+        </group>
+      )}
 
       {/* Marco negro delgado */}
       {edges.map(([w, h, x, y], i) => (

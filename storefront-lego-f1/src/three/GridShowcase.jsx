@@ -6,96 +6,21 @@ import { LedFrame, FRAME_H, INNER_H, RELIEF_DEPTH } from './LedFrame.jsx'
 import { LOW_POWER } from './Intro.jsx'
 import { useWallTexture } from './GalleryWall.jsx'
 
-// Sección del cuadro panorámico "Lights Out Legends Live" (12 autos).
-// Cuando entra en pantalla corre la largada de F1: se encienden 5 luces rojas una por una,
-// se apagan de golpe ("lights out") y en ese instante se prende el neón blanco del cuadro.
-// Tocar o pasar el cursor por un auto lo resalta y muestra su equipo.
+// Sección del cuadro panorámico "Lights Out Legends Live" (12 autos): solo el cuadro,
+// colgado en la pared negra con su luz LED encendida, tal como es en la realidad.
+// Con el cursor la vista se corre un poco de lado para que se note el relieve de los autos.
+// Tocar o pasar el cursor por un auto muestra su equipo.
 
-export const START = {
-  red: 0.5, // primera luz roja
-  step: 0.55, // una luz cada 0.55 s
-  out: 0.5 + 0.55 * 4 + 0.9, // "lights out": se apagan las 5
-  neon: 0.45, // subida del neón blanco
-}
-
-const REDUCED_MOTION =
-  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 const SMALL = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
 const BORDER = 0.07
 
-// Semáforo de largada: barra negra con 5 columnas de 2 luces rojas
-function StartLights({ clock, y }) {
-  const mats = useMemo(
-    () =>
-      Array.from(
-        { length: 5 },
-        () => new THREE.MeshBasicMaterial({ color: '#2a0405', toneMapped: false }),
-      ),
-    [],
-  )
-  useEffect(() => () => mats.forEach((m) => m.dispose()), [mats])
-  const off = useMemo(() => new THREE.Color('#2a0405'), [])
-  const on = useMemo(() => new THREE.Color('#ff1a1a').multiplyScalar(2.2), [])
-  useFrame(() => {
-    const t = clock.current
-    mats.forEach((m, i) => {
-      const lit = t >= START.red + i * START.step && t < START.out
-      m.color.copy(lit ? on : off)
-    })
-  })
-  const gap = 0.62
-  return (
-    <group position={[0, y, 0.25]}>
-      <mesh>
-        <boxGeometry args={[gap * 5 + 0.3, 1.25, 0.3]} />
-        <meshStandardMaterial color="#0b0b0c" roughness={0.5} metalness={0.4} />
-      </mesh>
-      {mats.map((m, i) =>
-        [0.28, -0.28].map((dy) => (
-          <mesh
-            key={`${i}${dy}`}
-            position={[(i - 2) * gap, dy, 0.16]}
-            rotation={[Math.PI / 2, 0, 0]}
-            material={m}
-          >
-            <cylinderGeometry args={[0.2, 0.2, 0.04, 28]} />
-          </mesh>
-        )),
-      )}
-    </group>
-  )
-}
-
-// Zonas táctiles sobre cada auto + resaltado del auto activo
-function CarHotspots({ cars, innerW, active, onActive, onOpen }) {
-  const colW = innerW * 0.068
-  const colH = INNER_H * 0.545
+// Zonas táctiles sobre cada auto (invisibles)
+function CarHotspots({ cars, innerW, onActive }) {
+  const colW = innerW * 0.075
+  const colH = INNER_H * 0.62
   const y = -INNER_H / 2 + colH / 2
-  const glow = useRef()
-  useFrame((_, dt) => {
-    if (!glow.current) return
-    const target = active == null ? 0 : 0.16
-    glow.current.material.opacity = THREE.MathUtils.damp(
-      glow.current.material.opacity,
-      target,
-      8,
-      dt,
-    )
-    if (active != null) glow.current.position.x = (cars[active].x - 0.5) * innerW
-  })
   return (
     <group>
-      <mesh ref={glow} position={[0, y, RELIEF_DEPTH + 0.01]} renderOrder={3}>
-        <planeGeometry args={[colW * 1.04, colH * 1.02]} />
-        <meshBasicMaterial
-          color="#ffffff"
-          transparent
-          opacity={0}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
       {cars.map((c, i) => (
         <mesh
           key={i}
@@ -103,13 +28,10 @@ function CarHotspots({ cars, innerW, active, onActive, onOpen }) {
           onPointerOver={(e) => {
             e.stopPropagation()
             onActive(i)
-            document.body.style.cursor = 'pointer'
           }}
-          onPointerOut={() => (document.body.style.cursor = '')}
           onClick={(e) => {
             e.stopPropagation()
             onActive(i)
-            onOpen?.()
           }}
         >
           <planeGeometry args={[colW, colH]} />
@@ -124,41 +46,36 @@ function CarHotspots({ cars, innerW, active, onActive, onOpen }) {
 // recorre deslizando de lado (panRef, de -1 a 1)
 function Rig({ frameW, panRef }) {
   const { camera, size } = useThree()
-  useFrame((_, dt) => {
+  const look = useRef({ x: 0 })
+  useFrame(({ pointer }, dt) => {
     const aspect = size.width / size.height
     const fov = THREE.MathUtils.degToRad(camera.fov)
-    // de la base del cuadro a lo alto del semáforo, con aire arriba y abajo (botones)
-    const bottom = -FRAME_H / 2 - 0.9
-    const top = FRAME_H / 2 + 1.05 + 0.62 + 0.35
-    const totalH = top - bottom
-    const centerY = (top + bottom) / 2
+    const totalH = FRAME_H + 0.9
     const distH = totalH / 2 / Math.tan(fov / 2)
-    const distW = (frameW + 1.2) / 2 / Math.tan(fov / 2) / aspect
+    const distW = (frameW + 0.9) / 2 / Math.tan(fov / 2) / aspect
     const portrait = aspect < 1
     const dist = portrait ? distH : Math.max(distW, distH)
     const visW = 2 * dist * Math.tan(fov / 2) * aspect
-    const maxPan = Math.max(0, (frameW + 0.6 - visW) / 2)
+    const maxPan = Math.max(0, (frameW + 0.5 - visW) / 2)
     const x = panRef.current * maxPan
-    camera.position.x = THREE.MathUtils.damp(camera.position.x, x, 6, dt)
-    camera.position.y = THREE.MathUtils.damp(camera.position.y, centerY, 6, dt)
+    // con el cursor la cámara se corre apenas de lado: se nota el relieve de los autos
+    const peek = LOW_POWER ? 0 : pointer.x * 0.9
+    look.current.x = THREE.MathUtils.damp(look.current.x, x, 6, dt)
+    camera.position.x = THREE.MathUtils.damp(camera.position.x, x + peek, 3, dt)
+    camera.position.y = THREE.MathUtils.damp(camera.position.y, 0, 6, dt)
     camera.position.z = THREE.MathUtils.damp(camera.position.z, dist, 4, dt)
-    camera.lookAt(camera.position.x, camera.position.y, 0)
+    camera.lookAt(look.current.x, 0, 0)
   })
   return null
 }
 
-function Scene({ product, running, active, onActive, onOpen, panRef }) {
+function Scene({ product, onActive, panRef }) {
   const wall = useWallTexture()
   const model = product.model
   const innerW = INNER_H * model.posterAspect
   const frameW = innerW + BORDER * 2
-  const clock = useRef(REDUCED_MOTION ? 99 : 0)
-  const light = useMemo(() => ({ current: REDUCED_MOTION ? 1 : 0 }), [])
-  useFrame((_, dt) => {
-    if (running) clock.current += Math.min(dt, 0.1)
-    const p = Math.min(1, Math.max(0, (clock.current - START.out) / START.neon))
-    light.current = p * p * (3 - 2 * p)
-  })
+  // la luz del cuadro queda siempre encendida
+  const light = useMemo(() => ({ current: 1 }), [])
   return (
     <>
       <mesh position={[0, 0, -0.06]}>
@@ -167,15 +84,8 @@ function Scene({ product, running, active, onActive, onOpen, panRef }) {
       </mesh>
       <Suspense fallback={null}>
         <LedFrame product={product} lightRef={light} powered />
-        <CarHotspots
-          cars={model.cars}
-          innerW={innerW}
-          active={active}
-          onActive={onActive}
-          onOpen={onOpen}
-        />
+        <CarHotspots cars={model.cars} innerW={innerW} onActive={onActive} />
       </Suspense>
-      <StartLights clock={clock} y={FRAME_H / 2 + 1.05} />
       <Rig frameW={frameW} panRef={panRef} />
     </>
   )
@@ -184,7 +94,6 @@ function Scene({ product, running, active, onActive, onOpen, panRef }) {
 export function GridShowcase({ product, onOpen, paused = false }) {
   const wrap = useRef()
   const [visible, setVisible] = useState(false)
-  const [started, setStarted] = useState(false)
   const [active, setActive] = useState(null)
   const panRef = useRef(0)
   const drag = useRef(null)
@@ -194,15 +103,9 @@ export function GridShowcase({ product, onOpen, paused = false }) {
       : 1
   const [dpr, setDpr] = useState(maxDpr)
 
-  // Arranca la largada cuando la sección se ve; solo dibuja mientras está en pantalla
+  // Solo dibuja mientras la sección está en pantalla
   useEffect(() => {
-    const io = new IntersectionObserver(
-      ([e]) => {
-        setVisible(e.isIntersecting)
-        if (e.intersectionRatio > 0.45) setStarted(true)
-      },
-      { threshold: [0, 0.45] },
-    )
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0 })
     io.observe(wrap.current)
     return () => io.disconnect()
   }, [])
@@ -223,11 +126,12 @@ export function GridShowcase({ product, onOpen, paused = false }) {
       }}
       onPointerUp={() => (drag.current = null)}
       onPointerCancel={() => (drag.current = null)}
+      onPointerLeave={() => setActive(null)}
     >
       <Canvas
         frameloop={visible && !paused ? 'always' : 'never'}
         dpr={dpr}
-        camera={{ position: [0, 0.55, 16], fov: 30 }}
+        camera={{ position: [0, 0, 16], fov: 30 }}
         gl={{
           antialias: true,
           powerPreference: 'high-performance',
@@ -242,14 +146,7 @@ export function GridShowcase({ product, onOpen, paused = false }) {
         />
         <color attach="background" args={['#060607']} />
         <ambientLight intensity={0.25} />
-        <Scene
-          product={product}
-          running={started}
-          active={active}
-          onActive={setActive}
-          onOpen={null}
-          panRef={panRef}
-        />
+        <Scene product={product} onActive={setActive} panRef={panRef} />
         <Environment resolution={128}>
           <Lightformer intensity={1.6} position={[0, 4, 5]} scale={[12, 2, 1]} />
         </Environment>
