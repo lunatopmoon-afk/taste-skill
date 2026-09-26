@@ -165,19 +165,20 @@ export const MODELS = {
     layout: 'wide', // no va en la fila de 3 del inicio: tiene su propia sección
     poster: '/cuadros/parrilla-4k.webp', // escalado con IA desde la foto del producto
     posterSmall: '/cuadros/parrilla-2k.webp',
-    // cada auto con su base sobresale como un bloque (capa sobre el póster)
+    // cada auto sobresale en relieve (recorte con su silueta, capa sobre el póster)
     cutout: '/cuadros/parrilla-auto.webp',
     cutout4k: '/cuadros/parrilla-auto-4k.webp',
-    posterAspect: 3.0027,
+    posterAspect: 2.7333, // cuadro completo, con las 12 bases enteras
     match: /(lights ?out|legends|parrilla|grid|12 autos|12 carros)/i,
     code: 'LOL',
     title: ['Lights Out', 'Legends Live'],
     titleStyle: 'rules',
     blurb:
-      'Los 12 autos de la parrilla en LEGO, cada uno sobre la base del color de su equipo, con los circuitos del calendario y marco con neón blanco.',
+      'Los 12 autos de la parrilla en LEGO, cada uno sobre la base del color de su equipo, con los circuitos del calendario y luz LED interior en el marco.',
     backdrop: { center: '#2a2d33', mid: '#16181c', edge: '#08090b' },
-    // neón blanco alrededor del marco (como en la foto) + halo blanco en la pared
-    led: { border: null, halo: '#ffffff', haloStrength: 0.55, neon: '#ffffff' },
+    // como en el cuadro real: tira LED blanca cálida escondida en el borde interior del
+    // marco, que ilumina el fondo pegado al borde
+    led: { border: null, halo: null, haloStrength: 0, lip: '#ffe9cc' },
     tires: '#f2c40c',
     engine: null,
     livery: {
@@ -194,18 +195,18 @@ export const MODELS = {
     },
     // posición horizontal (fracción del póster) de cada auto, de izquierda a derecha
     cars: [
-      { x: 0.0516, team: 'Ferrari', color: '#d3121a' },
-      { x: 0.133, team: 'McLaren', color: '#ff8000' },
-      { x: 0.2145, team: 'Red Bull Racing', color: '#1e3a8a' },
-      { x: 0.2959, team: 'Mercedes-AMG', color: '#00d2be' },
-      { x: 0.3774, team: 'Aston Martin', color: '#0f7a4a' },
-      { x: 0.4588, team: 'Alpine', color: '#f2a0c8' },
-      { x: 0.5403, team: 'Haas', color: '#e10600' },
-      { x: 0.6217, team: 'Williams', color: '#1f5fd6' },
-      { x: 0.7032, team: 'Racing Bulls', color: '#233a9e' },
-      { x: 0.7846, team: 'Kick Sauber', color: '#22b14c' },
-      { x: 0.8661, team: 'Leyenda negra y dorada', color: '#e0b000' },
-      { x: 0.9475, team: 'Leyenda blanca y roja', color: '#d9dde2' },
+      { x: 0.0542, team: 'Ferrari', color: '#d3121a' },
+      { x: 0.1356, team: 'McLaren', color: '#ff8000' },
+      { x: 0.2170, team: 'Red Bull Racing', color: '#1e3a8a' },
+      { x: 0.2983, team: 'Mercedes-AMG', color: '#00d2be' },
+      { x: 0.3797, team: 'Aston Martin', color: '#0f7a4a' },
+      { x: 0.4611, team: 'Alpine', color: '#f2a0c8' },
+      { x: 0.5425, team: 'Haas', color: '#e10600' },
+      { x: 0.6239, team: 'Racing Bulls', color: '#1f6fe0' },
+      { x: 0.7052, team: 'Williams', color: '#1b2f9e' },
+      { x: 0.7866, team: 'Kick Sauber', color: '#22b14c' },
+      { x: 0.8680, team: 'APXGP', color: '#e0b000' },
+      { x: 0.9494, team: 'Audi', color: '#c9ced6' },
     ],
     photos: ['/cuadros/parrilla-2k.webp'],
   },
