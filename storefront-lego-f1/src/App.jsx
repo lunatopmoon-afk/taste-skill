@@ -181,7 +181,11 @@ export default function App() {
               base de su equipo. Señala un auto para ver de qué equipo es.
             </p>
           </div>
-          <Suspense fallback={<div className="h-[62svh] md:h-[78svh]" />}>
+          <Suspense
+            fallback={
+              <div className="h-[62svh] md:h-[78svh] portrait:aspect-[2.35/1] portrait:h-auto md:portrait:h-auto" />
+            }
+          >
             <GridShowcase product={wideProduct} onOpen={setSelected} paused={Boolean(selected)} />
           </Suspense>
         </section>
