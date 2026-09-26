@@ -5,9 +5,16 @@
 import { DEMO_PRODUCTS } from './demoProducts.js'
 import { resolveModel } from './models.js'
 
-const DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN
-const TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
-const VERSION = import.meta.env.VITE_SHOPIFY_API_VERSION || '2026-07'
+// Se limpian los valores: un espacio, un salto de línea o un "https://" pegado por error en
+// las variables de Vercel rompen la conexión ("Load failed")
+const clean = (v) => (v ?? '').trim()
+const DOMAIN = clean(import.meta.env.VITE_SHOPIFY_STORE_DOMAIN)
+  .replace(/^https?:\/\//i, '')
+  .replace(/\/.*$/, '')
+const TOKEN = clean(import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN)
+const VERSION = /^\d{4}-\d{2}$/.test(clean(import.meta.env.VITE_SHOPIFY_API_VERSION))
+  ? clean(import.meta.env.VITE_SHOPIFY_API_VERSION)
+  : '2026-07'
 
 export const isShopifyConfigured = Boolean(DOMAIN && TOKEN)
 
