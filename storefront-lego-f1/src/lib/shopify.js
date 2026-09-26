@@ -17,16 +17,31 @@ const VERSION = /^\d{4}-\d{2}$/.test(clean(import.meta.env.VITE_SHOPIFY_API_VERS
   : '2026-07'
 
 export const isShopifyConfigured = Boolean(DOMAIN && TOKEN)
+export const shopifyDomain = DOMAIN
 
 async function storefront(query, variables = {}) {
-  const res = await fetch(`https://${DOMAIN}/api/${VERSION}/graphql.json`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Shopify-Storefront-Access-Token': TOKEN,
-    },
-    body: JSON.stringify({ query, variables }),
-  })
+  let res
+  try {
+    res = await fetch(`https://${DOMAIN}/api/${VERSION}/graphql.json`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Shopify-Storefront-Access-Token': TOKEN,
+      },
+      body: JSON.stringify({ query, variables }),
+    })
+  } catch {
+    // Sin respuesta: casi siempre el dominio no es el .myshopify.com real de la tienda
+    throw new Error(
+      `la tienda "${DOMAIN}" no respondió. Revisa que sea el dominio .myshopify.com exacto (Shopify → Configuración → Dominios)`,
+    )
+  }
+  if (res.status === 401 || res.status === 403)
+    throw new Error(
+      `Shopify rechazó el token (${res.status}). Usa el "Public access token" de Headless → Storefront API`,
+    )
+  if (res.status === 404)
+    throw new Error(`no existe la tienda "${DOMAIN}" o la versión de la API ${VERSION} (404)`)
   if (!res.ok) throw new Error(`Storefront API ${res.status}`)
   const json = await res.json()
   if (json.errors?.length) throw new Error(json.errors.map((e) => e.message).join('; '))
@@ -80,7 +95,12 @@ export async function fetchCatalog() {
     }
   `)
   const products = data.products.nodes.map(normalize)
-  return { shopName: data.shop.name, products: products.length ? products : DEMO_PRODUCTS }
+  // Conectado, pero sin productos: faltan publicarlos en el canal Headless
+  return {
+    shopName: data.shop.name,
+    products: products.length ? products : DEMO_PRODUCTS,
+    empty: !products.length,
+  }
 }
 
 // ---------- Carrito ----------
