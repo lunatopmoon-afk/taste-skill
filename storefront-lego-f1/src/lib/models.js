@@ -44,6 +44,8 @@ export const MODELS = {
       'El W14 negro con detalles turquesa, montado sobre fondo verde petróleo. Marco negro con retroiluminación cálida que baña la pared.',
     backdrop: { center: '#1d8a84', mid: '#0d4a48', edge: '#041615' },
     led: { border: '#5ff5e6', halo: WARM_HALO, haloStrength: 1 },
+    // ruedas del LEGO real: goma negra lisa, tapa negra y centro verde
+    wheelCover: { hub: '#7fcf5a' },
     tires: '#f2c40c',
     engine: 'mercedes',
     livery: {

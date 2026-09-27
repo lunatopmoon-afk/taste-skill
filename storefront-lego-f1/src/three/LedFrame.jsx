@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { LegoF1Car, UNIT, CAR_CENTER_Z } from './LegoF1Car.jsx'
+import { CAR_SHAPES } from '../lib/carShapes.js'
 
 // Cuadro como el de las fotos: marco negro delgado con luz LED.
 // Si el modelo tiene foto (model.poster), dentro del marco va LA FOTO REAL del cuadro,
@@ -226,8 +227,9 @@ function shadeEmissiveByVertexColor(shader) {
 // neumático, banda de color del compuesto, rin y centro.
 
 let sidewallCache = new Map()
-function sidewallTexture(band) {
-  if (sidewallCache.has(band)) return sidewallCache.get(band)
+function sidewallTexture(band, cover = null) {
+  const cacheKey = `${band}|${cover?.hub ?? ''}`
+  if (sidewallCache.has(cacheKey)) return sidewallCache.get(cacheKey)
   const S = 512
   const c = document.createElement('canvas')
   c.width = c.height = S
@@ -245,6 +247,22 @@ function sidewallTexture(band) {
   rubber.addColorStop(0.85, '#111112')
   rubber.addColorStop(1, '#070708')
   ring(1, rubber)
+  if (cover) {
+    // tapa de rueda lisa, negra satinada, con el centro de color (como el LEGO real)
+    const disc = ctx.createRadialGradient(R0 * 0.8, R0 * 0.75, 0, R0, R0, R0 * 0.7)
+    disc.addColorStop(0, '#2a2b2e')
+    disc.addColorStop(1, '#0c0c0d')
+    ring(0.7, '#050506')
+    ring(0.68, disc)
+    ring(0.2, '#0a0a0b')
+    ring(0.16, cover.hub)
+    ring(0.1, '#111113')
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 8
+    sidewallCache.set(cacheKey, t)
+    return t
+  }
   // banda de color del compuesto
   ring(0.86, band)
   ring(0.8, '#141415')
@@ -279,7 +297,7 @@ function sidewallTexture(band) {
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 8
-  sidewallCache.set(band, t)
+  sidewallCache.set(cacheKey, t)
   return t
 }
 
@@ -343,6 +361,119 @@ function Tire({ box, width, height, treadMat, sideMat }) {
   )
 }
 
+// ---------- suspensión y grosor del auto ----------
+// En el LEGO real cada rueda se une al chasis con dos brazos en "V" (arriba y abajo) y una
+// varilla de empuje, todo en Technic negro. Sin esto, al girar el cuadro las ruedas 3D se
+// ven sueltas. Los anclajes al chasis salen del recorte de cada auto (lib/carShapes.js).
+const up = new THREE.Vector3(0, 1, 0)
+function rodTransform(a, b) {
+  const va = new THREE.Vector3(...a)
+  const vb = new THREE.Vector3(...b)
+  const dir = vb.clone().sub(va)
+  return {
+    pos: va.clone().add(vb).multiplyScalar(0.5),
+    quat: new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize()),
+    len: dir.length(),
+  }
+}
+let rodGeo
+function Suspension({ wheels, anchors, width, height, material }) {
+  if (!rodGeo) rodGeo = new THREE.CylinderGeometry(1, 1, 1, 10)
+  const rods = useMemo(() => {
+    const list = []
+    wheels.forEach(([cx, cy, bw, bh], i) => {
+      const radius = (bh * height) / 2
+      const side = cx < 0.5 ? 1 : -1 // hacia el centro del auto
+      const hubX = (cx - 0.5) * width + (side * bw * width) / 2
+      const Y = (0.5 - cy) * height
+      const zc = radius + 0.004
+      const ax = (anchors[i] - 0.5) * width
+      const spread = radius * 0.85
+      const top = RELIEF_DEPTH - 0.02
+      const low = Math.max(0.05, RELIEF_DEPTH - 0.13)
+      const hubTop = [hubX, Y, zc + radius * 0.3]
+      const hubLow = [hubX, Y, zc - radius * 0.35]
+      // brazo superior en V
+      list.push([hubTop, [ax, Y + spread, top]], [hubTop, [ax, Y - spread, top]])
+      // brazo inferior en V
+      list.push([hubLow, [ax, Y + spread * 0.8, low]], [hubLow, [ax, Y - spread * 0.8, low]])
+      // varilla de empuje y barra de dirección
+      list.push([hubLow, [ax, Y + spread * 0.25, top]])
+      list.push([
+        [hubX, Y - radius * 0.2, zc],
+        [ax, Y - radius * 0.2, (top + low) / 2],
+      ])
+    })
+    return list.map(([a, b]) => rodTransform(a, b))
+  }, [wheels, anchors, width, height])
+  const r = height * 0.0045
+  return (
+    <group>
+      {rods.map(({ pos, quat, len }, i) => (
+        <mesh
+          key={i}
+          geometry={rodGeo}
+          material={material}
+          position={pos}
+          quaternion={quat}
+          scale={[r, len, r]}
+          castShadow
+        />
+      ))}
+      {/* porta-ruedas: el bloque que sujeta cada rueda por dentro */}
+      {wheels.map(([cx, cy, bw, bh], i) => {
+        const radius = (bh * height) / 2
+        const side = cx < 0.5 ? 1 : -1
+        return (
+          <mesh
+            key={`h${i}`}
+            material={material}
+            position={[
+              (cx - 0.5) * width + (side * bw * width) / 2 + side * 0.012,
+              (0.5 - cy) * height,
+              radius,
+            ]}
+            castShadow
+          >
+            <boxGeometry args={[0.03, radius * 0.9, radius * 0.9]} />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+// Paredes del auto: el contorno del recorte se extruye hacia el fondo, así el LEGO se ve
+// sólido (con grosor) al girar el cuadro, en vez de una lámina flotando
+function BodyWalls({ outline, wheels, width, height, material }) {
+  // los bordes que caen sobre las ruedas no se levantan: ahí van las llantas 3D
+  const onWheel = (u, v) =>
+    wheels?.some(([cx, cy, bw, bh]) => Math.abs(u - cx) < bw * 0.62 && Math.abs(v - cy) < bh * 0.62)
+  const geo = useMemo(() => {
+    const pos = []
+    const z0 = 0.03
+    const z1 = RELIEF_DEPTH - 0.003
+    for (const poly of outline) {
+      for (let i = 0; i < poly.length; i++) {
+        const [u0, v0] = poly[i]
+        const [u1, v1] = poly[(i + 1) % poly.length]
+        if (onWheel((u0 + u1) / 2, (v0 + v1) / 2)) continue
+        const x0 = (u0 - 0.5) * width
+        const y0 = (0.5 - v0) * height
+        const x1 = (u1 - 0.5) * width
+        const y1 = (0.5 - v1) * height
+        pos.push(x0, y0, z0, x1, y1, z0, x1, y1, z1, x0, y0, z0, x1, y1, z1, x0, y0, z1)
+      }
+    }
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    g.computeVertexNormals()
+    return g
+  }, [outline, width, height])
+  useEffect(() => () => geo.dispose(), [geo])
+  return <mesh geometry={geo} material={material} />
+}
+
 function PhotoPoster({
   src,
   srcSmall,
@@ -361,6 +492,9 @@ function PhotoPoster({
   posterMat,
   silhouetteMat,
   showCar = true,
+  shape,
+  carbonMat,
+  wallMat,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   const [texture, heightMap, emptyTex, shadowTex, cutoutTex] = useTexture([
@@ -449,6 +583,26 @@ function PhotoPoster({
         </>
       ) : (
         <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
+      )}
+      {layered && shape && (
+        <>
+          <BodyWalls
+            outline={shape.outline}
+            wheels={wheels}
+            width={width}
+            height={height}
+            material={wallMat}
+          />
+          {wheels && (
+            <Suspension
+              wheels={wheels}
+              anchors={shape.arms}
+              width={width}
+              height={height}
+              material={carbonMat}
+            />
+          )}
+        </>
       )}
       {wheels?.map((box, i) => (
         <Tire
@@ -599,7 +753,7 @@ export function LedFrame({
     [],
   )
   const sideMat = useMemo(() => {
-    const tex = sidewallTexture(model.tires ?? '#f2c40c')
+    const tex = sidewallTexture(model.tires ?? '#f2c40c', model.wheelCover)
     return new THREE.MeshStandardMaterial({
       map: tex,
       emissive: '#ffffff',
@@ -609,6 +763,29 @@ export function LedFrame({
       metalness: 0.1,
     })
   }, [model])
+  // Technic negro de los brazos de suspensión y costados del auto (color de la carrocería, en
+  // sombra: los costados reciben poca luz)
+  const carbonMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#0d0d0f', roughness: 0.45, metalness: 0.1 }),
+    [],
+  )
+  const wallMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(model.livery?.body ?? '#101010').multiplyScalar(0.45),
+        roughness: 0.55,
+        metalness: 0.05,
+        side: THREE.DoubleSide,
+      }),
+    [model],
+  )
+  useEffect(
+    () => () => {
+      carbonMat.dispose()
+      wallMat.dispose()
+    },
+    [carbonMat, wallMat],
+  )
   const emptyMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
   useEffect(() => () => emptyMat.dispose(), [emptyMat])
   const cutoutMat = useMemo(
@@ -871,6 +1048,9 @@ export function LedFrame({
           silhouetteMat={silhouetteMat}
           emptyMat={emptyMat}
           showCar={showCar}
+          shape={CAR_SHAPES[model.key]}
+          carbonMat={carbonMat}
+          wallMat={wallMat}
         />
       ) : (
         <mesh position={[0, 0, 0.002]} receiveShadow>
