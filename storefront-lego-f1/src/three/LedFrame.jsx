@@ -318,45 +318,112 @@ function getContactTexture() {
   return contactTexture
 }
 
+// Proyección de frente de la foto: cada punto toma el color que tiene en el póster
+function projectUV(geo, X, Y, width, height) {
+  const pos = geo.attributes.position
+  const uv = geo.attributes.uv
+  for (let i = 0; i < pos.count; i++) {
+    uv.setXY(i, (X + pos.getX(i) + width / 2) / width, (Y + pos.getY(i) + height / 2) / height)
+  }
+  uv.needsUpdate = true
+}
+
+// Llanta como la goma real: banda de rodadura con los hombros redondeados (no un cilindro
+// recto). La banda usa la foto proyectada de frente, así que de frente coincide exacto
 function tireGeometry(box, width, height) {
   const [cx, cy, bw, bh] = box
   const radius = (bh * height) / 2
   const length = bw * width
   const X = (cx - 0.5) * width
   const Y = (0.5 - cy) * height
-  const radial = 72
-  const geo = new THREE.CylinderGeometry(radius, radius, length, radial, 1)
-  geo.rotateZ(Math.PI / 2) // eje de la llanta: horizontal, paralelo a la pared
-  // Banda de rodadura: proyección de frente de la foto (coincide exacto con el póster)
-  const pos = geo.attributes.position
-  const uv = geo.attributes.uv
-  const sideCount = (radial + 1) * 2
-  for (let i = 0; i < sideCount; i++) {
-    uv.setXY(i, (X + pos.getX(i) + width / 2) / width, (Y + pos.getY(i) + height / 2) / height)
+  const f = Math.min(length * 0.24, radius * 0.2) // radio del hombro
+  const pts = []
+  const half = length / 2
+  pts.push(new THREE.Vector2(radius - f, -half))
+  for (let k = 1; k <= 8; k++) {
+    const a = (k / 8) * (Math.PI / 2)
+    pts.push(new THREE.Vector2(radius - f + Math.sin(a) * f, -half + f - Math.cos(a) * f))
   }
-  uv.needsUpdate = true
-  return { geo, radius, length, X, Y }
+  for (let k = 0; k <= 8; k++) {
+    const a = (k / 8) * (Math.PI / 2)
+    pts.push(new THREE.Vector2(radius - f + Math.cos(a) * f, half - f + Math.sin(a) * f))
+  }
+  const geo = new THREE.LatheGeometry(pts, 96)
+  geo.rotateZ(-Math.PI / 2) // eje de la llanta: horizontal, paralelo a la pared
+  projectUV(geo, X, Y, width, height)
+  geo.computeVertexNormals()
+  return { geo, radius, length, X, Y, sideR: radius - f }
 }
 
-function Tire({ box, width, height, treadMat, sideMat }) {
-  const { geo, radius, length, X, Y } = useMemo(
+// Deflector del freno delantero: la placa con el logo que va sobre la mitad interior de la
+// rueda delantera (ver fotos del LEGO real), con su soporte hasta el porta-ruedas
+function ductGeometry(box, width, height) {
+  const [cx, cy, bw, bh] = box
+  const radius = (bh * height) / 2
+  const length = bw * width
+  const X = (cx - 0.5) * width
+  const Y = (0.5 - cy) * height
+  const side = cx < 0.5 ? 1 : -1 // hacia el centro del auto
+  const xIn = X + side * length * 0.5
+  const xOut = X - side * length * 0.08
+  const shape = new THREE.Shape()
+  shape.moveTo(xIn, Y - radius * 0.95)
+  shape.lineTo(xIn, Y + radius * 0.95)
+  shape.lineTo(xOut, Y + radius * 0.5)
+  shape.lineTo(xOut, Y - radius * 0.6)
+  const geo = new THREE.ShapeGeometry(shape)
+  projectUV(geo, 0, 0, width, height)
+  return { geo, z: radius * 2 + 0.018, xIn, Y, radius, side }
+}
+
+function Tire({ box, width, height, treadMat, sideMat, plateMat, carbonMat }) {
+  const { geo, radius, length, X, Y, sideR } = useMemo(
     () => tireGeometry(box, width, height),
     [box, width, height],
   )
-  useEffect(() => () => geo.dispose(), [geo])
+  const front = box[1] < 0.5
+  const duct = useMemo(
+    () => (front ? ductGeometry(box, width, height) : null),
+    [front, box, width, height],
+  )
+  useEffect(
+    () => () => {
+      geo.dispose()
+      duct?.geo.dispose()
+    },
+    [geo, duct],
+  )
   const contact = useMemo(getContactTexture, [])
+  const zc = radius + 0.004
   return (
     <group>
       <mesh position={[X, Y, 0.006]} renderOrder={1}>
         <planeGeometry args={[length * 1.25, radius * 2.3]} />
         <meshBasicMaterial map={contact} transparent depthWrite={false} opacity={0.9} />
       </mesh>
-      <mesh
-        position={[X, Y, radius + 0.004]}
-        geometry={geo}
-        material={[treadMat, sideMat, sideMat]}
-        castShadow
-      />
+      <mesh position={[X, Y, zc]} geometry={geo} material={treadMat} castShadow />
+      {/* costados: goma, banda de color, rin y centro */}
+      {[-1, 1].map((s) => (
+        <mesh
+          key={s}
+          position={[X + (s * length) / 2, Y, zc]}
+          rotation={[0, (s * Math.PI) / 2, 0]}
+          material={sideMat}
+        >
+          <circleGeometry args={[sideR, 64]} />
+        </mesh>
+      ))}
+      {duct && plateMat && (
+        <group>
+          <mesh geometry={duct.geo} position={[0, 0, duct.z]} material={plateMat} renderOrder={3} />
+          <mesh
+            material={carbonMat}
+            position={[duct.xIn + duct.side * 0.012, duct.Y, (duct.z + zc) / 2]}
+          >
+            <boxGeometry args={[0.022, duct.radius * 1.2, duct.z - zc]} />
+          </mesh>
+        </group>
+      )}
     </group>
   )
 }
@@ -669,6 +736,8 @@ function PhotoPoster({
           height={height}
           treadMat={treadMat}
           sideMat={sideMat}
+          plateMat={layered ? cutoutMat : null}
+          carbonMat={carbonMat}
         />
       ))}
     </>
