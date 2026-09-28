@@ -443,35 +443,88 @@ function Suspension({ wheels, anchors, width, height, material }) {
   )
 }
 
-// Paredes del auto: el contorno del recorte se extruye hacia el fondo, así el LEGO se ve
-// sólido (con grosor) al girar el cuadro, en vez de una lámina flotando
-function BodyWalls({ outline, wheels, width, height, material }) {
-  // los bordes que caen sobre las ruedas no se levantan: ahí van las llantas 3D
+// El LEGO por capas, como está construido: piso y bordes de los pontones pegados al fondo,
+// alerón delantero y costados a media altura, y morro, alerón trasero y la columna central
+// (cubierta del motor y cabina) lo más afuera. Cada capa es la misma foto recortada con su
+// máscara (*-capaN.png) a su altura, con sus costados del color real del borde. De frente se
+// ve idéntico a la foto; al girar el cuadro se ven los escalones y el grosor del LEGO.
+function CarLayers({ shapeKey, layers, wheels, cutoutMat, width, height }) {
+  const masks = useTexture(layers.map((_, k) => `/cuadros/${shapeKey}-capa${k}.png`))
+  const mats = useMemo(
+    () =>
+      masks.map(
+        (alphaMap) =>
+          new THREE.MeshBasicMaterial({
+            map: cutoutMat.map,
+            alphaMap,
+            transparent: true,
+            alphaTest: 0.5,
+            toneMapped: false,
+          }),
+      ),
+    [masks, cutoutMat.map],
+  )
+  useEffect(() => () => mats.forEach((m) => m.dispose()), [mats])
+  useFrame(() => {
+    for (const m of mats) m.color.copy(cutoutMat.color)
+  })
   const onWheel = (u, v) =>
     wheels?.some(([cx, cy, bw, bh]) => Math.abs(u - cx) < bw * 0.62 && Math.abs(v - cy) < bh * 0.62)
-  const geo = useMemo(() => {
+  const walls = useMemo(() => {
     const pos = []
-    const z0 = 0.03
-    const z1 = RELIEF_DEPTH - 0.003
-    for (const poly of outline) {
-      for (let i = 0; i < poly.length; i++) {
-        const [u0, v0] = poly[i]
-        const [u1, v1] = poly[(i + 1) % poly.length]
-        if (onWheel((u0 + u1) / 2, (v0 + v1) / 2)) continue
-        const x0 = (u0 - 0.5) * width
-        const y0 = (0.5 - v0) * height
-        const x1 = (u1 - 0.5) * width
-        const y1 = (0.5 - v1) * height
-        pos.push(x0, y0, z0, x1, y1, z0, x1, y1, z1, x0, y0, z0, x1, y1, z1, x0, y0, z1)
+    const col = []
+    const c = new THREE.Color()
+    layers.forEach(({ z, outline }, k) => {
+      const z0 = k === 0 ? 0.03 : layers[k - 1].z
+      for (const poly of outline) {
+        for (let i = 0; i < poly.length; i++) {
+          const [u0, v0, r0, g0, b0] = poly[i]
+          const [u1, v1, r1, g1, b1] = poly[(i + 1) % poly.length]
+          if (onWheel((u0 + u1) / 2, (v0 + v1) / 2)) continue
+          const x0 = (u0 - 0.5) * width
+          const y0 = (0.5 - v0) * height
+          const x1 = (u1 - 0.5) * width
+          const y1 = (0.5 - v1) * height
+          pos.push(x0, y0, z0, x1, y1, z0, x1, y1, z, x0, y0, z0, x1, y1, z, x0, y0, z)
+          // costado del color de la pieza, un poco más oscuro (le llega menos luz)
+          const a = c.setRGB(r0 / 255, g0 / 255, b0 / 255, THREE.SRGBColorSpace).multiplyScalar(0.6)
+          const ca = [a.r, a.g, a.b]
+          const bb = c
+            .setRGB(r1 / 255, g1 / 255, b1 / 255, THREE.SRGBColorSpace)
+            .multiplyScalar(0.6)
+          const cb = [bb.r, bb.g, bb.b]
+          col.push(...ca, ...cb, ...cb, ...ca, ...cb, ...ca)
+        }
       }
-    }
+    })
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
     g.computeVertexNormals()
     return g
-  }, [outline, width, height])
-  useEffect(() => () => geo.dispose(), [geo])
-  return <mesh geometry={geo} material={material} />
+  }, [layers, width, height, wheels])
+  useEffect(() => () => walls.dispose(), [walls])
+  const wallMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.5,
+        metalness: 0.05,
+        side: THREE.DoubleSide,
+      }),
+    [],
+  )
+  useEffect(() => () => wallMat.dispose(), [wallMat])
+  return (
+    <group>
+      <mesh geometry={walls} material={wallMat} />
+      {layers.map(({ z }, k) => (
+        <mesh key={k} position={[0, 0, z]} material={mats[k]} renderOrder={2 + k}>
+          <planeGeometry args={[width, height]} />
+        </mesh>
+      ))}
+    </group>
+  )
 }
 
 function PhotoPoster({
@@ -493,8 +546,8 @@ function PhotoPoster({
   silhouetteMat,
   showCar = true,
   shape,
+  shapeKey,
   carbonMat,
-  wallMat,
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   const [texture, heightMap, emptyTex, shadowTex, cutoutTex] = useTexture([
@@ -577,22 +630,26 @@ function PhotoPoster({
           <mesh position={[0, 0, 0.002]} material={posterMat}>
             <planeGeometry args={[width, height]} />
           </mesh>
-          <mesh position={[0, 0, RELIEF_DEPTH]} material={cutoutMat} renderOrder={2}>
-            <planeGeometry args={[width, height]} />
-          </mesh>
+          {shape?.layers ? (
+            <CarLayers
+              shapeKey={shapeKey}
+              layers={shape.layers}
+              wheels={wheels}
+              cutoutMat={cutoutMat}
+              width={width}
+              height={height}
+            />
+          ) : (
+            <mesh position={[0, 0, RELIEF_DEPTH]} material={cutoutMat} renderOrder={2}>
+              <planeGeometry args={[width, height]} />
+            </mesh>
+          )}
         </>
       ) : (
         <mesh position={[0, 0, 0.002]} geometry={geometry} material={material} />
       )}
       {layered && shape && (
         <>
-          <BodyWalls
-            outline={shape.outline}
-            wheels={wheels}
-            width={width}
-            height={height}
-            material={wallMat}
-          />
           {wheels && (
             <Suspension
               wheels={wheels}
@@ -763,29 +820,12 @@ export function LedFrame({
       metalness: 0.1,
     })
   }, [model])
-  // Technic negro de los brazos de suspensión y costados del auto (color de la carrocería, en
-  // sombra: los costados reciben poca luz)
+  // Technic negro de los brazos de suspensión
   const carbonMat = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#0d0d0f', roughness: 0.45, metalness: 0.1 }),
     [],
   )
-  const wallMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(model.livery?.body ?? '#101010').multiplyScalar(0.45),
-        roughness: 0.55,
-        metalness: 0.05,
-        side: THREE.DoubleSide,
-      }),
-    [model],
-  )
-  useEffect(
-    () => () => {
-      carbonMat.dispose()
-      wallMat.dispose()
-    },
-    [carbonMat, wallMat],
-  )
+  useEffect(() => () => carbonMat.dispose(), [carbonMat])
   const emptyMat = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
   useEffect(() => () => emptyMat.dispose(), [emptyMat])
   const cutoutMat = useMemo(
@@ -1049,8 +1089,8 @@ export function LedFrame({
           emptyMat={emptyMat}
           showCar={showCar}
           shape={CAR_SHAPES[model.key]}
+          shapeKey={model.key}
           carbonMat={carbonMat}
-          wallMat={wallMat}
         />
       ) : (
         <mesh position={[0, 0, 0.002]} receiveShadow>
