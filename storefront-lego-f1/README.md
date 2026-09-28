@@ -26,11 +26,11 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 
   La secuencia está en `src/three/Intro.jsx` y sus tiempos, en `INTRO`. Para revisar un momento exacto, agrega `?introT=4.2` a la dirección y la animación se congela en ese segundo. Con "reducir movimiento" activado, la entrada se salta.
 - **Cursor sobre un cuadro:** el cuadro gira un poco de izquierda a derecha, se acerca y sube el brillo.
-- **Clic:** abre el visor 3D. Solo se gira de izquierda a derecha, en un rango corto, sin acercar ni alejar. Además:
+- **Clic:** abre la ficha del producto con sus fotos (las de Shopify) en grande; se pasan con las flechas o las miniaturas, en el mismo panel. El precio va en dorado. El botón **"Ver en 3D"** abre el visor 3D.
+- **Visor 3D:** Solo se gira de izquierda a derecha, en un rango corto, sin acercar ni alejar. Además:
   - **Vista lateral:** el cuadro 3D gira y se funde con **la foto real de costado**, en 4K. Esa foto se retocó para que los tres queden iguales: sin línea de luz interior, marco negro y la misma luz cálida en la pared. Si mueves el cursor encima, se inclina un poco; con un clic se amplía.
   - **LED encendido/apagado.**
   - **Fotos reales**, para ampliarlas.
-- **La parrilla completa (4.º producto, "Lights Out Legends Live"):** cuadro panorámico con los 12 autos, en su propia sección debajo del inicio (`src/three/GridShowcase.jsx`), sin animación. Muestra el cuadro tal como es en la realidad: completo con las 12 bases, marco negro profundo y tira LED blanca cálida escondida en el borde interior, que ilumina las paredes internas del marco y el fondo pegado al borde. Se ve completo en cualquier pantalla, también en celular o iPad en vertical, sin deslizar. Cada auto sobresale en 3D con su silueta. En computadora, con el cursor la vista se corre apenas de lado para que se note el relieve. Al señalar o tocar un auto aparece su equipo (lista en `cars` de `src/lib/models.js`, de izquierda a derecha: Ferrari, McLaren, Red Bull, Mercedes, Aston Martin, Alpine, Haas, Racing Bulls, Williams, Kick Sauber, APXGP y Audi). En Shopify se reconoce con la etiqueta `modelo:parrilla` o si el título incluye "Lights Out" / "Legends".
 - **Carrito** con la Storefront API y pago en el checkout oficial de Shopify.
 - **En el móvil:** se ven los tres cuadros en fila.
 

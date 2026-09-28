@@ -80,8 +80,7 @@ export function FrameViewer({
               onToggleOpen()
             }}
           >
-            {/* los cuadros panorámicos se achican para caber completos en el visor */}
-            <group scale={product.model.layout === 'wide' ? 0.42 : 1}>
+            <group>
               <SteeringFrame
                 product={product}
                 finish={finish}

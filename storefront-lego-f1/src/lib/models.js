@@ -161,57 +161,6 @@ export const MODELS = {
     },
     photos: ['/cuadros/ferrari-lateral-2k.webp'],
   },
-  // Cuarto producto: cuadro panorámico con los 12 autos de la parrilla
-  parrilla: {
-    key: 'parrilla',
-    layout: 'wide', // no va en la fila de 3 del inicio: tiene su propia sección
-    poster: '/cuadros/parrilla-4k.webp', // escalado con IA desde la foto del producto
-    posterSmall: '/cuadros/parrilla-2k.webp',
-    // cada auto sobresale en relieve (recorte con su silueta, capa sobre el póster)
-    cutout: '/cuadros/parrilla-auto.webp',
-    cutout4k: '/cuadros/parrilla-auto-4k.webp',
-    posterAspect: 2.7333, // cuadro completo, con las 12 bases enteras
-    match: /(lights ?out|legends|parrilla|grid|12 autos|12 carros)/i,
-    code: 'LOL',
-    title: ['Lights Out', 'Legends Live'],
-    titleStyle: 'rules',
-    blurb:
-      'Los 12 autos de la parrilla en LEGO, cada uno sobre la base del color de su equipo, con los circuitos del calendario y luz LED interior en el marco.',
-    backdrop: { center: '#2a2d33', mid: '#16181c', edge: '#08090b' },
-    // como en el cuadro real: tira LED blanca cálida escondida en el borde interior del
-    // marco, que ilumina el fondo pegado al borde
-    led: { border: null, halo: null, haloStrength: 0, lip: '#ffe9cc' },
-    tires: '#f2c40c',
-    engine: null,
-    livery: {
-      body: '#1a1b1f',
-      bodyAlt: '#23252a',
-      nose: '#1a1b1f',
-      accent: '#ffffff',
-      wing: '#141414',
-      wingAccent: '#ffffff',
-      rearFlap: '#1a1a1d',
-      floor: '#0d0d0d',
-      helmet: '#ffffff',
-      stripes: '#ffffff',
-    },
-    // posición horizontal (fracción del póster) de cada auto, de izquierda a derecha
-    cars: [
-      { x: 0.0542, team: 'Ferrari', color: '#d3121a' },
-      { x: 0.1356, team: 'McLaren', color: '#ff8000' },
-      { x: 0.2170, team: 'Red Bull Racing', color: '#1e3a8a' },
-      { x: 0.2983, team: 'Mercedes-AMG', color: '#00d2be' },
-      { x: 0.3797, team: 'Aston Martin', color: '#0f7a4a' },
-      { x: 0.4611, team: 'Alpine', color: '#f2a0c8' },
-      { x: 0.5425, team: 'Haas', color: '#e10600' },
-      { x: 0.6239, team: 'Racing Bulls', color: '#1f6fe0' },
-      { x: 0.7052, team: 'Williams', color: '#1b2f9e' },
-      { x: 0.7866, team: 'Kick Sauber', color: '#22b14c' },
-      { x: 0.8680, team: 'APXGP', color: '#e0b000' },
-      { x: 0.9494, team: 'Audi', color: '#c9ced6' },
-    ],
-    photos: ['/cuadros/parrilla-2k.webp'],
-  },
 }
 
 const ORDER = ['mercedes', 'redbull', 'ferrari']
@@ -224,7 +173,6 @@ export function resolveModel(product, index = 0) {
     return MODELS[explicit.trim().toLowerCase()]
   }
   const haystack = `${product.title} ${product.handle}`
-  if (MODELS.parrilla.match.test(haystack)) return MODELS.parrilla
   const found = ORDER.find((k) => MODELS[k].match.test(haystack))
   return MODELS[found ?? ORDER[index % ORDER.length]]
 }

@@ -94,7 +94,10 @@ export async function fetchCatalog() {
       products(first: 12, sortKey: BEST_SELLING) { nodes { ${PRODUCT_FIELDS} } }
     }
   `)
-  const products = data.products.nodes.map(normalize)
+  // El cuadro de la parrilla ("Lights Out Legends Live") ya no se vende en esta web
+  const products = data.products.nodes
+    .filter((p) => !/(lights ?out|legends|parrilla)/i.test(`${p.title} ${p.handle}`))
+    .map(normalize)
   // Conectado, pero sin productos: faltan publicarlos en el canal Headless
   return {
     shopName: data.shop.name,
@@ -157,10 +160,9 @@ export async function updateCartLine(cartId, lineId, quantity) {
 }
 
 export async function fetchCart(cartId) {
-  const data = await storefront(
-    `query Cart($id: ID!) { cart(id: $id) { ${CART_FIELDS} } }`,
-    { id: cartId },
-  )
+  const data = await storefront(`query Cart($id: ID!) { cart(id: $id) { ${CART_FIELDS} } }`, {
+    id: cartId,
+  })
   return data.cart
 }
 
