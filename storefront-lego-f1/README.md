@@ -17,8 +17,8 @@ Los tres cuadros usan la misma retroiluminación cálida (la del Red Bull).
 | **Ferrari SF-24** | `public/cuadros/ferrari-4k.webp` | retroiluminación cálida sobre la pared |
 
 **Interacciones**
-- **Entrada (unos 7 s, con botón "Saltar intro"). El texto del inicio se ve desde el primer momento; los autos caen en el espacio negro de arriba, sobre donde luego quedan los cuadros:**
-  1. Caen desde arriba los tres autos F1 reales vistos desde arriba, morro abajo, como en el video aprobado (`<modelo>-real.webp`, tomados del video y escalados con IA).
+- **Entrada (unos 7 s, con botón "Saltar intro"). El texto del inicio y los tres autos se ven desde el primer momento:**
+  1. Los tres autos F1 reales, vistos desde arriba y morro abajo, están a la vista desde que abre la página (no caen). Mientras carga el 3D se muestran como imagen normal (`<modelo>-real-sm.webp`, precargada en `index.html`); cuando arranca la animación, la imagen calza justo sobre el auto 3D y se desvanece.
   2. La carrocería se va convirtiendo en LEGO: aparecen las juntas y los studs de ladrillos 1x2 (aparejo corrido). Cada ladrillo se suelta de su lugar, deja su hueco exacto y sale disparado hacia la cámara con el color del auto, que pasa al color LEGO en el aire. De adentro salen además piezas Technic: ladrillos y placas con studs, vigas Technic con agujeros, engranajes, ejes en cruz y pines, en colores oficiales LEGO (`src/three/legoPieces.js`).
   3. Las piezas se rearman: cada una toma el color de la foto real en su punto, y el conjunto se funde con el auto LEGO de la foto, ahora con el morro hacia arriba.
   4. Los cuadros llegan vacíos desde el fondo oscuro y cada LEGO encaja en el suyo.

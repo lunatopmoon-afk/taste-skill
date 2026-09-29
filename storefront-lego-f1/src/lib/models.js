@@ -25,6 +25,7 @@ export const MODELS = {
     cutout4k: '/cuadros/mercedes-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/mercedes-real.webp',
+    realCarSmall: '/cuadros/mercedes-real-sm.webp', // se muestra al instante, antes del 3D
     realAspect: 0.3571,
     posterEmpty: '/cuadros/mercedes-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
@@ -77,6 +78,7 @@ export const MODELS = {
     cutout4k: '/cuadros/redbull-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/redbull-real.webp',
+    realCarSmall: '/cuadros/redbull-real-sm.webp', // se muestra al instante, antes del 3D
     realAspect: 0.365,
     posterEmpty: '/cuadros/redbull-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
@@ -127,6 +129,7 @@ export const MODELS = {
     cutout4k: '/cuadros/ferrari-auto-4k.webp', // LEGO recortado en 4K: capa sobre el póster
     // Entrada: auto F1 real visto desde arriba (foto de estudio recortada, escalada con IA)
     realCar: '/cuadros/ferrari-real.webp',
+    realCarSmall: '/cuadros/ferrari-real-sm.webp', // se muestra al instante, antes del 3D
     realAspect: 0.3736,
     posterEmpty: '/cuadros/ferrari-vacio.webp',
     // Llantas 3D: [centro x, centro y, ancho, alto] en fracción del póster (y desde arriba)
