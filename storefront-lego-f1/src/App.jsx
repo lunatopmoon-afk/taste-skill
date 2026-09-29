@@ -4,6 +4,7 @@ import { Cube, ShoppingBag } from '@phosphor-icons/react'
 import { fetchCatalog, formatMoney, isShopifyConfigured } from './lib/shopify.js'
 import { DEMO_PRODUCTS } from './lib/demoProducts.js'
 import { useCart } from './lib/useCart.js'
+import { HeroCars } from './components/HeroCars.jsx'
 import { ProductModal } from './components/ProductModal.jsx'
 import { CartDrawer } from './components/CartDrawer.jsx'
 
@@ -35,6 +36,8 @@ export default function App() {
   // Entrada animada del hero: el texto aparece cuando termina
   const [introDone, setIntroDone] = useState(false)
   const [skipIntro, setSkipIntro] = useState(false)
+  // dónde quedan los autos 3D en pantalla (para la transición desde las imágenes)
+  const [carRects, setCarRects] = useState(null)
   const { cart, busy, error, add, setQuantity } = useCart()
 
   useEffect(() => {
@@ -99,11 +102,13 @@ export default function App() {
               onActiveChange={setActive}
               onSelect={setSelected}
               onIntroDone={() => setIntroDone(true)}
+              onCarRects={setCarRects}
               skipIntro={skipIntro}
               paused={Boolean(selected)}
             />
           </div>
         </Suspense>
+        <HeroCars products={products} rects={carRects} hidden={skipIntro || introDone} />
 
         {!introDone && (
           <button
@@ -115,7 +120,7 @@ export default function App() {
         )}
         <motion.div
           className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-asphalt via-asphalt/80 to-transparent px-5 pb-8 pt-24 md:px-10 md:pb-10"
-          // el texto se ve desde que abre la página; los autos caen en el espacio negro de arriba
+          // el texto se ve desde que abre la página; los autos están arriba, a la vista
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}

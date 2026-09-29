@@ -23,7 +23,7 @@ Object.values(MODELS).forEach((m) =>
     .forEach((url) => useTexture.preload(url)),
 )
 
-// Pared de la galería. Al entrar corre la secuencia de Intro.jsx: autos reales que caen,
+// Pared de la galería. Al entrar corre la secuencia de Intro.jsx: los autos reales a la vista,
 // estallan en piezas LEGO, se rearman, los cuadros llegan desde el fondo, el LEGO encaja
 // y se prenden las tres luces a la vez. Luego, pasar el cursor gira el cuadro a los lados.
 
@@ -179,7 +179,13 @@ function cameraLayout(size, fovDeg, total, spacing) {
 
 function CameraRig({ total, spacing, timeline }) {
   const { camera, size, scene } = useThree()
+  const first = useRef(true)
   useFrame(({ pointer }, dt) => {
+    // el primer cuadro la cámara ya está en su lugar: los autos se ven quietos desde el inicio
+    if (first.current) {
+      first.current = false
+      dt = 100
+    }
     const { dist, baseY } = cameraLayout(size, camera.fov, total, spacing)
 
     // Entrada: la cámara se acerca despacio durante toda la secuencia y tiembla en el estallido
@@ -229,7 +235,7 @@ function Wall({ timeline }) {
   )
 }
 
-function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
+function Frames({ products, onActiveChange, onSelect, onIntroDone, onCarRects, skip }) {
   const size = useThree((state) => state.size)
   const fov = useThree((state) => state.camera.fov)
   const spacing = spacingFor(size.width / size.height)
@@ -253,6 +259,7 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   return (
     <>
       <Wall timeline={timeline} />
+      {/* Los cuadros cargan aparte (fotos 4K): la entrada no los espera, llegan a los 4.6 s */}
       <Suspense fallback={null}>
         {products.map((p, i) => (
           <HangingFrame
@@ -268,6 +275,9 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
             interactive={interactive}
           />
         ))}
+      </Suspense>
+      {/* La entrada arranca apenas están las fotos de los autos (livianas) */}
+      <Suspense fallback={null}>
         {!REDUCED_MOTION && (
           <IntroCars
             products={products}
@@ -275,6 +285,7 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
             sizes={sizes}
             layout={layout}
             timeline={timeline}
+            onCarRects={onCarRects}
           />
         )}
         <Timeline
@@ -296,6 +307,7 @@ export function GalleryWall({
   onActiveChange,
   onSelect,
   onIntroDone,
+  onCarRects,
   skipIntro = false,
   paused = false,
 }) {
@@ -348,6 +360,7 @@ export function GalleryWall({
         onActiveChange={onActiveChange}
         onSelect={onSelect}
         onIntroDone={onIntroDone}
+        onCarRects={onCarRects}
         skip={skipIntro}
       />
 
