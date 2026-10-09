@@ -18,16 +18,16 @@ import { FRAME_H, RELIEF_DEPTH } from './LedFrame.jsx'
 
 export const INTRO = {
   carsIn: 0, // los autos reales ya están a la vista
-  burst: 1.25, // empiezan a convertirse en LEGO y a romperse
-  dissolve: 1.9, // cuánto tarda el auto en deshacerse por completo
-  reform: 3.35, // las piezas empiezan a rearmarse
-  reformed: 4.55, // ya son LEGO
-  framesIn: 4.6, // los cuadros llegan desde el fondo
-  framesSet: 5.6,
-  integrate: 5.65, // el LEGO entra al cuadro
-  integrated: 6.05,
-  lights: 6.25, // luces
-  done: 6.8,
+  burst: 0.9, // empiezan a convertirse en LEGO y a romperse
+  dissolve: 1.2, // cuánto tarda el auto en deshacerse por completo
+  reform: 2.25, // las piezas empiezan a rearmarse
+  reformed: 3.05, // ya son LEGO
+  framesIn: 3.05, // los cuadros llegan desde el fondo
+  framesSet: 3.85,
+  integrate: 3.9, // el LEGO entra al cuadro
+  integrated: 4.25,
+  lights: 4.4, // luces
+  done: 4.9,
 }
 
 export const Z_FLOAT = 1.4 // altura a la que flotan los LEGO delante de la pared
@@ -39,9 +39,9 @@ const SMALL_SCREEN =
 export const LOW_POWER =
   SMALL_SCREEN || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
 // Cuadrícula de ladrillos 1x2 sobre cada auto: columnas a lo ancho
-const GRID_COLS = SMALL_SCREEN ? 8 : LOW_POWER ? 10 : 12
+const GRID_COLS = SMALL_SCREEN ? 7 : LOW_POWER ? 8 : 12
 // piezas Technic extra (vigas, engranajes…) por cada ladrillo, para variedad
-const EXTRA_RATIO = LOW_POWER ? 0.3 : 0.6
+const EXTRA_RATIO = LOW_POWER ? 0.2 : 0.6
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -210,7 +210,7 @@ function RealCar({ texture, place, aspect, index, grid, timeline, onRect }) {
     // al empezar: avisa dónde quedó el auto en pantalla, para que la imagen
     // que se mostró mientras cargaba el 3D se acomode justo encima y se desvanezca
     // (segundo cuadro: la cámara ya quedó en su lugar)
-    if (++frames.current === 2 && onRect) {
+    if (timeline.current.ready && ++frames.current === 2 && onRect) {
       g.updateWorldMatrix(true, false)
       const pts = [
         [-place.w / 2, place.h / 2],
@@ -330,7 +330,7 @@ function LegoBurst({ cars, timeline }) {
           target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
           size,
           spawn: INTRO.burst + cell.release * INTRO.dissolve + (fromBack ? 0.05 : 0),
-          delay: rand() * 0.35,
+          delay: rand() * 0.2,
         })
       }
       // 1. un ladrillo 1x2 (o placa) por celda, del tamaño exacto del hueco que deja
@@ -400,7 +400,7 @@ function LegoBurst({ cars, timeline }) {
             .multiplyScalar((1 - Math.exp(-k * tau)) / k)
             .add(pc.start)
         }
-        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 0.85))
+        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 0.6))
         // el giro arranca suave: al soltarse, el ladrillo sale plano, con los studs a la cámara
         const turn = (tau) => tau * Math.min(1, tau * 2.2)
         if (u <= 0) {
@@ -476,7 +476,7 @@ function LegoCutout({ cutout, x, width, height, timeline }) {
   )
 }
 
-// El mismo LEGO en 4K (en celular basta el 2K)
+// El mismo LEGO en 4K (en celular y tablet basta el 2K)
 function LegoCutout4k({ src, fallback, ...props }) {
   const maxAniso = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   const tex = useTexture(src ?? fallback.image.src)
@@ -524,7 +524,13 @@ export function IntroCars({ products, xs, sizes, layout, timeline, onCarRects })
   const list = products.filter((p) => p.model.cutout && p.model.realCar)
   // Solo espera lo liviano (foto real + recorte 2K): así la animación arranca enseguida.
   // El LEGO en 4K llega aparte y reemplaza al 2K sin que se note.
-  const textures = useTexture(list.flatMap((p) => [p.model.realCar, p.model.cutout]))
+  // en celular/tablet la foto real en 720 px basta (se ve a menos de eso) y sube al instante
+  const textures = useTexture(
+    list.flatMap((p) => [
+      LOW_POWER ? (p.model.realCarSmall ?? p.model.realCar) : p.model.realCar,
+      p.model.cutout,
+    ]),
+  )
   const rects = useRef([])
   const maxAniso = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   useMemo(() => {
@@ -604,7 +610,7 @@ export function IntroCars({ products, xs, sizes, layout, timeline, onCarRects })
           }
         >
           <LegoCutout4k
-            src={SMALL_SCREEN ? null : list[i].model.cutout4k}
+            src={LOW_POWER ? null : list[i].model.cutout4k}
             fallback={c.lego}
             x={c.legoX}
             width={c.legoW}
