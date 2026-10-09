@@ -4,7 +4,7 @@ import {
   Cube,
   GlobeHemisphereWest,
   LightbulbFilament,
-  Package,
+  PuzzlePiece,
   ShieldCheck,
   ShoppingBag,
 } from '@phosphor-icons/react'
@@ -21,8 +21,8 @@ const GalleryWall = lazy(() =>
 // Ajusta estos textos a las características reales de tus cuadros.
 const SPECS = [
   [
-    'Auto de bloques armado',
-    'El modelo completo, armado pieza por pieza con bloques de construcción y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.',
+    'Auto de bloques para armar',
+    'El modelo completo en bloques de construcción para que lo armes tú mismo, pieza por pieza: ruedas, alerones y suspensión. Luego va fijado al fondo en vista cenital.',
   ],
   [
     'Retroiluminación LED',
@@ -34,9 +34,9 @@ const SPECS = [
 
 // Lo que más pregunta quien compra, a la vista apenas baja del inicio
 const PERKS = [
-  [Package, 'Llega armado', 'Listo para colgar en tu pared'],
+  [PuzzlePiece, 'Ármalo tú mismo', 'Disfruta el armado pieza por pieza'],
   [LightbulbFilament, 'Luz LED incluida', 'Retroiluminación cálida'],
-  [ShieldCheck, 'Pago seguro', 'Checkout oficial de Shopify'],
+  [ShieldCheck, 'Pago seguro', 'Tarjeta de crédito y PayPal'],
   [GlobeHemisphereWest, 'Envíos internacionales', 'Embalaje protegido'],
 ]
 
@@ -312,7 +312,7 @@ export default function App() {
             <p className="font-mono text-sm font-medium uppercase tracking-[0.3em]">{shopName}</p>
             <p className="mt-3 max-w-[40ch] text-sm leading-relaxed text-dim">
               Cuadros de colección con autos de Fórmula 1 de bloques de construcción y luz LED.
-              Listos para colgar.
+              Para armar y colgar.
             </p>
           </div>
           <nav aria-label="Pie de página" className="grid content-start gap-2 text-sm">
@@ -333,7 +333,7 @@ export default function App() {
           <div className="grid content-start gap-2 text-sm">
             <p className="mb-1 font-mono text-xs uppercase tracking-widest text-signal">Compra</p>
             <p className="flex items-center gap-2 text-dim">
-              <ShieldCheck size={16} className="text-signal" /> Pago seguro con Shopify
+              <ShieldCheck size={16} className="text-signal" /> Pago seguro con tarjeta de crédito y PayPal
             </p>
             <p className="flex items-center gap-2 text-dim">
               <GlobeHemisphereWest size={16} className="text-signal" /> Envíos internacionales
