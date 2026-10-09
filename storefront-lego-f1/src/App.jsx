@@ -182,18 +182,24 @@ export default function App() {
       </section>
 
       {/* BENEFICIOS */}
-      <section aria-label="Beneficios" className="border-y border-line bg-pit/60">
-        <ul className="mx-auto grid max-w-[1400px] grid-cols-2 gap-px md:grid-cols-4">
-          {PERKS.map(([Icon, title, text]) => (
-            <li key={title} className="flex items-center gap-3 px-5 py-5 md:px-8 md:py-6">
-              <Icon size={26} weight="light" className="shrink-0 text-signal" />
-              <div>
-                <p className="text-sm font-semibold">{title}</p>
-                <p className="text-xs text-dim">{text}</p>
-              </div>
-            </li>
+      {/* Cinta que corre sin fin: dos copias seguidas, al llegar a la mitad vuelve a empezar */}
+      <section aria-label="Beneficios" className="marquee border-y border-line bg-pit/60 py-5 md:py-6">
+        <div className="marquee-track">
+          {[0, 1].map((copy) => (
+            <ul key={copy} className="flex shrink-0" aria-hidden={copy === 1 || undefined}>
+              {PERKS.map(([Icon, title, text]) => (
+                <li key={title} className="flex shrink-0 items-center gap-3 pl-10 md:pl-16">
+                  <Icon size={24} weight="light" className="shrink-0 text-signal" />
+                  <p className="whitespace-nowrap text-sm">
+                    <span className="font-semibold">{title}</span>
+                    <span className="text-dim"> · {text}</span>
+                  </p>
+                  <span className="ml-10 h-1.5 w-1.5 rotate-45 bg-signal/70 md:ml-16" aria-hidden />
+                </li>
+              ))}
+            </ul>
           ))}
-        </ul>
+        </div>
       </section>
 
       {/* COLECCIÓN */}
