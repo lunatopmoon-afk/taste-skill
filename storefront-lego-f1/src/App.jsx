@@ -206,12 +206,11 @@ export default function App() {
       <section id="coleccion" className="mx-auto max-w-[1400px] px-5 py-24 md:px-10 md:py-32">
         <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-signal">
-              01 · Parrilla de salida
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tighter md:text-5xl">
-              La <span className="gold-text">colección</span>
+            <p className="font-mono text-xs uppercase tracking-widest text-signal">Collection</p>
+            <h2 className="mt-3 text-5xl font-semibold tracking-tighter md:text-7xl">
+              Compra <span className="gold-text">aquí</span>
             </h2>
+            <p className="mt-3 text-lg text-dim md:text-xl">Selecciona el tuyo.</p>
           </div>
           {!isShopifyConfigured && (
             <p className="font-mono text-xs uppercase tracking-widest text-dim">
@@ -278,7 +277,7 @@ export default function App() {
         <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-24 md:grid-cols-[1fr_1.4fr] md:px-10 md:py-32">
           <div>
             <p className="font-mono text-xs uppercase tracking-widest text-signal">
-              02 · Ficha técnica
+              Ficha técnica
             </p>
             <h2 className="mt-3 max-w-[14ch] text-3xl font-semibold tracking-tighter md:text-5xl">
               Hecho para verse desde el otro lado del cuarto.
