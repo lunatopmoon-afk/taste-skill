@@ -164,9 +164,6 @@ export const RELIEF_DEPTH = 0.22
 const SMALL_SCREEN =
   typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
 const RELIEF_SEGMENTS = SMALL_SCREEN ? 200 : 380
-// Teléfono y tablet: texturas 2K (subir una 4K a la GPU congela la animación un instante;
-// en esas pantallas el cuadro se ve a menos de 2K de todos modos)
-const LIGHT_TEX = SMALL_SCREEN || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
 
 // Muestreo bilineal del mapa de alturas: bordes del relieve suaves, sin escalones
 function sampleHeight(data, w, h, u, v) {
@@ -621,7 +618,7 @@ function PhotoPoster({
 }) {
   const maxAnisotropy = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   const [texture, heightMap, emptyTex, shadowTex, cutoutTex] = useTexture([
-    LIGHT_TEX && srcSmall ? srcSmall : src,
+    SMALL_SCREEN && srcSmall ? srcSmall : src,
     relief ?? src,
     emptySrc ?? src,
     shadowSrc ?? relief ?? src,
@@ -1154,7 +1151,7 @@ export function LedFrame({
           sideMat={sideMat}
           emptySrc={model.posterEmpty}
           shadowSrc={model.shadow}
-          cutoutSrc={LIGHT_TEX ? model.cutout : model.cutout4k}
+          cutoutSrc={SMALL_SCREEN ? model.cutout : model.cutout4k}
           cutoutMat={cutoutMat}
           posterMat={posterMat}
           silhouetteMat={silhouetteMat}

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -6,8 +6,8 @@ import { legoGeometries, nearestLegoColor, PIECE_MIX } from './legoPieces.js'
 import { FRAME_H, RELIEF_DEPTH } from './LedFrame.jsx'
 
 // Entrada de la página (boceto aprobado):
-//   1. Los tres autos F1 reales, vistos desde arriba, están a la vista desde que abre la
-//      página (grandes y cerca, morro abajo); no caen.
+//   1. Los tres autos F1 reales, vistos desde arriba (como en el video aprobado), caen
+//      desde lo alto hacia la pantalla y quedan grandes y cerca, morro abajo.
 //   2. Se van rompiendo poco a poco: de todo el auto saltan piezas LEGO reales
 //      (ladrillos con studs, vigas Technic, engranajes, ejes, pines) que vuelan hacia la
 //      cámara, mientras la cámara se acerca y una luz del color de cada equipo los baña.
@@ -17,17 +17,17 @@ import { FRAME_H, RELIEF_DEPTH } from './LedFrame.jsx'
 // Todo se mide en segundos sobre un único reloj (timeline.current.t).
 
 export const INTRO = {
-  carsIn: 0, // los autos reales ya están a la vista
-  burst: 0.9, // empiezan a convertirse en LEGO y a romperse
-  dissolve: 1.2, // cuánto tarda el auto en deshacerse por completo
-  reform: 2.25, // las piezas empiezan a rearmarse
-  reformed: 3.05, // ya son LEGO
-  framesIn: 3.05, // los cuadros llegan desde el fondo
-  framesSet: 3.85,
-  integrate: 3.9, // el LEGO entra al cuadro
-  integrated: 4.25,
-  lights: 4.4, // luces
-  done: 4.9,
+  carsIn: 0, // caen los autos reales
+  burst: 1.25, // empiezan a convertirse en LEGO y a romperse
+  dissolve: 1.9, // cuánto tarda el auto en deshacerse por completo
+  reform: 3.35, // las piezas empiezan a rearmarse
+  reformed: 4.55, // ya son LEGO
+  framesIn: 4.6, // los cuadros llegan desde el fondo
+  framesSet: 5.6,
+  integrate: 5.65, // el LEGO entra al cuadro
+  integrated: 6.05,
+  lights: 6.25, // luces
+  done: 6.8,
 }
 
 export const Z_FLOAT = 1.4 // altura a la que flotan los LEGO delante de la pared
@@ -39,9 +39,9 @@ const SMALL_SCREEN =
 export const LOW_POWER =
   SMALL_SCREEN || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
 // Cuadrícula de ladrillos 1x2 sobre cada auto: columnas a lo ancho
-const GRID_COLS = SMALL_SCREEN ? 7 : LOW_POWER ? 8 : 12
+const GRID_COLS = SMALL_SCREEN ? 8 : LOW_POWER ? 10 : 12
 // piezas Technic extra (vigas, engranajes…) por cada ladrillo, para variedad
-const EXTRA_RATIO = LOW_POWER ? 0.2 : 0.6
+const EXTRA_RATIO = LOW_POWER ? 0.3 : 0.6
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const easeOutCubic = (p) => 1 - Math.pow(1 - p, 3)
@@ -173,9 +173,8 @@ const dissolveFragment = /* glsl */ `
   }
 `
 
-function RealCar({ texture, place, aspect, index, grid, timeline, onRect }) {
+function RealCar({ texture, place, aspect, index, grid, timeline }) {
   const ref = useRef()
-  const frames = useRef(0)
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -198,37 +197,30 @@ function RealCar({ texture, place, aspect, index, grid, timeline, onRect }) {
   useEffect(() => () => material.dispose(), [material])
   useEffect(() => () => grid.texture.dispose(), [grid])
 
-  useFrame(({ camera, size }) => {
+  useFrame(() => {
     const t = timeline.current.t
     const g = ref.current
     const end = INTRO.burst + INTRO.dissolve
     g.visible = t < end
     if (!g.visible) return
-    // Ya no cae: el auto está en su lugar desde el primer momento (la página abre con los
-    // tres autos a la vista) y enseguida empieza a convertirse en LEGO
-    g.position.set(place.x, place.y, Z_REAL)
-    // al empezar: avisa dónde quedó el auto en pantalla, para que la imagen
-    // que se mostró mientras cargaba el 3D se acomode justo encima y se desvanezca
-    // (segundo cuadro: la cámara ya quedó en su lugar)
-    if (timeline.current.ready && ++frames.current === 2 && onRect) {
-      g.updateWorldMatrix(true, false)
-      const pts = [
-        [-place.w / 2, place.h / 2],
-        [place.w / 2, -place.h / 2],
-      ].map(([x, y]) => new THREE.Vector3(x, y, 0).applyMatrix4(g.matrixWorld).project(camera))
-      onRect(index, {
-        left: ((pts[0].x + 1) / 2) * size.width,
-        top: ((1 - pts[0].y) / 2) * size.height,
-        width: ((pts[1].x - pts[0].x) / 2) * size.width,
-        height: ((pts[0].y - pts[1].y) / 2) * size.height,
-      })
-    }
+    // Cae desde arriba y desde el fondo hacia la pantalla (como en el video), con un
+    // pequeño rebote al detenerse
+    const start = INTRO.carsIn + index * 0.06
+    const u = span(t, start, start + 1.0)
+    const c1 = 1.25
+    const back = 1 + (c1 + 1) * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2) // easeOutBack
+    const fall = u >= 1 ? 1 : back
+    g.position.set(
+      place.x,
+      place.y + (1 - fall) * place.visH * 0.75,
+      THREE.MathUtils.lerp(Z_REAL - 14, Z_REAL, easeOutCubic(u)),
+    )
     // la foto ya viene morro abajo, como en el video
     g.rotation.set(0, 0, 0)
     // al romperse, el auto se sacude levemente
     const hit = t > INTRO.burst ? Math.exp(-(t - INTRO.burst) * 3) : 0
     g.position.x += Math.sin(t * 60 + index) * hit * 0.04
-    material.uniforms.uOpacity.value = 1
+    material.uniforms.uOpacity.value = Math.min(1, u * 2.5)
     // mismo reloj que las piezas: cada ladrillo se abre cuando su pieza sale disparada
     material.uniforms.uProgress.value = span(t, INTRO.burst, end)
   })
@@ -330,7 +322,7 @@ function LegoBurst({ cars, timeline }) {
           target: new THREE.Vector3(car.legoX + b.x, b.y, Z_FLOAT + 0.05 + rand() * 0.15),
           size,
           spawn: INTRO.burst + cell.release * INTRO.dissolve + (fromBack ? 0.05 : 0),
-          delay: rand() * 0.2,
+          delay: rand() * 0.35,
         })
       }
       // 1. un ladrillo 1x2 (o placa) por celda, del tamaño exacto del hueco que deja
@@ -400,7 +392,7 @@ function LegoBurst({ cars, timeline }) {
             .multiplyScalar((1 - Math.exp(-k * tau)) / k)
             .add(pc.start)
         }
-        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 0.6))
+        const u = easeInOutCubic(span(t, INTRO.reform + pc.delay, INTRO.reform + pc.delay + 0.85))
         // el giro arranca suave: al soltarse, el ladrillo sale plano, con los studs a la cámara
         const turn = (tau) => tau * Math.min(1, tau * 2.2)
         if (u <= 0) {
@@ -476,18 +468,6 @@ function LegoCutout({ cutout, x, width, height, timeline }) {
   )
 }
 
-// El mismo LEGO en 4K (en celular y tablet basta el 2K)
-function LegoCutout4k({ src, fallback, ...props }) {
-  const maxAniso = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
-  const tex = useTexture(src ?? fallback.image.src)
-  useMemo(() => {
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.anisotropy = maxAniso
-    tex.needsUpdate = true
-  }, [tex, maxAniso])
-  return <LegoCutout cutout={src ? tex : fallback} {...props} />
-}
-
 // Luces del estallido: una luz del color de cada equipo detrás de cada auto (como en el
 // video, el fondo se tiñe de turquesa, azul y rojo) y una luz frontal suave para las piezas
 function BurstLights({ cars, timeline }) {
@@ -519,19 +499,16 @@ function BurstLights({ cars, timeline }) {
   )
 }
 
-export function IntroCars({ products, xs, sizes, layout, timeline, onCarRects }) {
+export function IntroCars({ products, xs, sizes, layout, timeline }) {
   const { size, camera } = useThree()
   const list = products.filter((p) => p.model.cutout && p.model.realCar)
-  // Solo espera lo liviano (foto real + recorte 2K): así la animación arranca enseguida.
-  // El LEGO en 4K llega aparte y reemplaza al 2K sin que se note.
-  // en celular/tablet la foto real en 720 px basta (se ve a menos de eso) y sube al instante
+  // LEGO en 4K (el mismo archivo que usa el cuadro después), 2K solo en celular
   const textures = useTexture(
     list.flatMap((p) => [
-      LOW_POWER ? (p.model.realCarSmall ?? p.model.realCar) : p.model.realCar,
-      p.model.cutout,
+      p.model.realCar,
+      SMALL_SCREEN ? p.model.cutout : (p.model.cutout4k ?? p.model.cutout),
     ]),
   )
-  const rects = useRef([])
   const maxAniso = useThree((state) => state.gl.capabilities.getMaxAnisotropy())
   useMemo(() => {
     textures.forEach((t) => {
@@ -589,35 +566,18 @@ export function IntroCars({ products, xs, sizes, layout, timeline, onCarRects })
           index={i}
           grid={c.grid}
           timeline={timeline}
-          onRect={(i, r) => {
-            rects.current[i] = r
-            if (rects.current.filter(Boolean).length === cars.length) onCarRects?.(rects.current)
-          }}
         />
       ))}
       <LegoBurst cars={cars} timeline={timeline} />
       {cars.map((c, i) => (
-        <Suspense
+        <LegoCutout
           key={`lego-${list[i].id}`}
-          fallback={
-            <LegoCutout
-              cutout={c.lego}
-              x={c.legoX}
-              width={c.legoW}
-              height={c.legoH}
-              timeline={timeline}
-            />
-          }
-        >
-          <LegoCutout4k
-            src={LOW_POWER ? null : list[i].model.cutout4k}
-            fallback={c.lego}
-            x={c.legoX}
-            width={c.legoW}
-            height={c.legoH}
-            timeline={timeline}
-          />
-        </Suspense>
+          cutout={c.lego}
+          x={c.legoX}
+          width={c.legoW}
+          height={c.legoH}
+          timeline={timeline}
+        />
       ))}
       <BurstLights cars={cars} timeline={timeline} />
     </>
