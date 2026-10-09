@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from 'react'
+import { Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Lightformer, PerformanceMonitor } from '@react-three/drei'
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
@@ -73,7 +73,7 @@ const FROZEN_T =
     ? parseFloat(new URLSearchParams(window.location.search).get('introT'))
     : NaN
 
-function Timeline({ timeline, onDone, hold }) {
+function Timeline({ timeline, onDone }) {
   const fired = useRef(false)
   useFrame((_, rawDt) => {
     const tl = timeline.current
@@ -81,8 +81,6 @@ function Timeline({ timeline, onDone, hold }) {
       tl.t = FROZEN_T
       return
     }
-    // la entrada espera a que termine la largada (semáforo) que se ve encima
-    if (hold) return
     // tiempo real: aunque un cuadro tarde, la animación sigue a su velocidad (sin cámara lenta
     // ni tirones). Solo se limitan pausas largas, como la subida inicial de texturas 4K.
     tl.t += Math.min(rawDt, 0.1)
@@ -216,22 +214,56 @@ function CameraRig({ total, spacing, timeline }) {
   return null
 }
 
-// La pared negra aparece cuando los cuadros ya llegaron (antes, los cuadros vienen desde atrás)
+// Fondo de pista nocturna difuminada (las tres estelas con los colores de los equipos):
+// se ve mientras caen los autos, para que desde el primer segundo se sepa que es F1.
+// Es el mismo archivo que usa la página mientras carga el 3D, así no hay salto.
+export const TRACK_BG = '/cuadros/pista.webp'
+const TRACK_ASPECT = 16 / 9
+useTexture.preload(TRACK_BG)
+function TrackBackdrop() {
+  const tex = useTexture(TRACK_BG)
+  const scene = useThree((state) => state.scene)
+  const size = useThree((state) => state.size)
+  useLayoutEffect(() => {
+    tex.colorSpace = THREE.SRGBColorSpace
+    // como background-size: cover
+    const a = size.width / size.height
+    if (a > TRACK_ASPECT) {
+      tex.repeat.set(1, TRACK_ASPECT / a)
+      tex.offset.set(0, (1 - TRACK_ASPECT / a) / 2)
+    } else {
+      tex.repeat.set(a / TRACK_ASPECT, 1)
+      tex.offset.set((1 - a / TRACK_ASPECT) / 2, 0)
+    }
+    tex.needsUpdate = true
+    scene.background = tex
+    return () => {
+      scene.background = new THREE.Color('#060607')
+    }
+  }, [tex, scene, size])
+  return null
+}
+
+// La pared negra cubre la pista con un fundido mientras llegan los cuadros
 function Wall({ timeline }) {
   const wall = useWallTexture()
   const ref = useRef()
+  const mat = useRef()
   useFrame(() => {
-    ref.current.visible = timeline.current.t >= INTRO.framesSet
+    const p = span(timeline.current.t, INTRO.framesIn, INTRO.framesSet)
+    ref.current.visible = p > 0
+    mat.current.opacity = p
+    mat.current.transparent = p < 1
   })
   return (
     <mesh ref={ref} position={[0, 0, -0.06]}>
       <planeGeometry args={[70, 40]} />
-      <meshBasicMaterial color="#0b0b0c" map={wall} toneMapped={false} />
+      <meshBasicMaterial ref={mat} color="#0b0b0c" map={wall} toneMapped={false} />
     </mesh>
   )
 }
 
-function Frames({ products, onActiveChange, onSelect, onIntroDone, skip, hold }) {
+function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   const size = useThree((state) => state.size)
   const fov = useThree((state) => state.camera.fov)
   const spacing = spacingFor(size.width / size.height)
@@ -255,6 +287,10 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip, hold })
   return (
     <>
       <Wall timeline={timeline} />
+      {/* aparte: es liviana y se ve antes de que terminen de cargar los cuadros */}
+      <Suspense fallback={null}>
+        <TrackBackdrop />
+      </Suspense>
       <Suspense fallback={null}>
         {products.map((p, i) => (
           <HangingFrame
@@ -281,7 +317,6 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip, hold })
         )}
         <Timeline
           timeline={timeline}
-          hold={hold && !skip}
           onDone={() => {
             setInteractive(true)
             onIntroDone?.()
@@ -300,7 +335,6 @@ export function GalleryWall({
   onSelect,
   onIntroDone,
   skipIntro = false,
-  hold = false,
   paused = false,
 }) {
   // Resolución completa de la pantalla: 3x en teléfono (lienzo pequeño), 2x en iPad, hasta
@@ -353,7 +387,6 @@ export function GalleryWall({
         onSelect={onSelect}
         onIntroDone={onIntroDone}
         skip={skipIntro}
-        hold={hold}
       />
 
       <Environment resolution={256}>
