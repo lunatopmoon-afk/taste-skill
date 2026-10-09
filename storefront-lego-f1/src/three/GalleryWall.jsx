@@ -73,7 +73,7 @@ const FROZEN_T =
     ? parseFloat(new URLSearchParams(window.location.search).get('introT'))
     : NaN
 
-function Timeline({ timeline, onDone }) {
+function Timeline({ timeline, onDone, hold }) {
   const fired = useRef(false)
   useFrame((_, rawDt) => {
     const tl = timeline.current
@@ -81,6 +81,8 @@ function Timeline({ timeline, onDone }) {
       tl.t = FROZEN_T
       return
     }
+    // la entrada espera a que termine la largada (semáforo) que se ve encima
+    if (hold) return
     // tiempo real: aunque un cuadro tarde, la animación sigue a su velocidad (sin cámara lenta
     // ni tirones). Solo se limitan pausas largas, como la subida inicial de texturas 4K.
     tl.t += Math.min(rawDt, 0.1)
@@ -229,7 +231,7 @@ function Wall({ timeline }) {
   )
 }
 
-function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
+function Frames({ products, onActiveChange, onSelect, onIntroDone, skip, hold }) {
   const size = useThree((state) => state.size)
   const fov = useThree((state) => state.camera.fov)
   const spacing = spacingFor(size.width / size.height)
@@ -279,6 +281,7 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
         )}
         <Timeline
           timeline={timeline}
+          hold={hold && !skip}
           onDone={() => {
             setInteractive(true)
             onIntroDone?.()
@@ -297,6 +300,7 @@ export function GalleryWall({
   onSelect,
   onIntroDone,
   skipIntro = false,
+  hold = false,
   paused = false,
 }) {
   // Resolución completa de la pantalla: 3x en teléfono (lienzo pequeño), 2x en iPad, hasta
@@ -349,6 +353,7 @@ export function GalleryWall({
         onSelect={onSelect}
         onIntroDone={onIntroDone}
         skip={skipIntro}
+        hold={hold}
       />
 
       <Environment resolution={256}>

@@ -162,7 +162,7 @@ export function ProductModal({ product, onClose, onAdd, busy }) {
               {showSidePhoto
                 ? 'Foto real de costado'
                 : hasPhoto
-                  ? 'Desliza a los lados para ver cómo sobresale el LEGO'
+                  ? 'Desliza a los lados para ver cómo sobresale el auto'
                   : open
                     ? 'Mueve el cursor: las ruedas delanteras giran contigo'
                     : 'Arrastra para girar · doble clic saca el auto'}

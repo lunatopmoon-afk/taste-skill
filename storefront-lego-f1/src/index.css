@@ -19,6 +19,7 @@
 }
 
 html {
+  scroll-behavior: smooth;
   background: var(--color-asphalt);
   color: var(--color-chalk);
   -webkit-font-smoothing: antialiased;
@@ -105,6 +106,140 @@ canvas {
     background-position: 0 0, 4px 4px, 0 0;
   }
 
+  /* Bandera a cuadros fina: separador con aire de pista */
+  .checker-rule {
+    height: 8px;
+    opacity: 0.55;
+    background-image:
+      linear-gradient(45deg, #f1efe9 25%, transparent 25%, transparent 75%, #f1efe9 75%),
+      linear-gradient(45deg, #f1efe9 25%, transparent 25%, transparent 75%, #f1efe9 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 4px 4px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+  }
+
+  /* ---------- Largada (LightsOut.jsx) ---------- */
+  .lights-out {
+    transition: clip-path 0.55s cubic-bezier(0.7, 0, 0.3, 1);
+    clip-path: inset(0 0 0 0);
+  }
+  .lights-out--gone {
+    clip-path: inset(0 0 100% 0);
+    transition-delay: 0.25s;
+  }
+  .race-stripes {
+    position: absolute;
+    inset: -20%;
+    transform: rotate(-14deg);
+    pointer-events: none;
+  }
+  .race-stripe {
+    position: absolute;
+    left: 0;
+    width: 160%;
+    transform: translateX(-110%);
+    animation: stripe-sweep 1.1s cubic-bezier(0.65, 0, 0.2, 1) forwards;
+  }
+  .race-stripe--checker {
+    top: 41%;
+    height: 22px;
+    opacity: 0.22;
+    background-image:
+      linear-gradient(45deg, #f1efe9 25%, transparent 25%, transparent 75%, #f1efe9 75%),
+      linear-gradient(45deg, #f1efe9 25%, transparent 25%, transparent 75%, #f1efe9 75%);
+    background-size: 22px 22px;
+    background-position: 0 0, 11px 11px;
+  }
+  .race-stripe--gold {
+    top: 46%;
+    height: 6px;
+    background: linear-gradient(90deg, transparent, #e4c07e 30%, #fff0c9 60%, transparent);
+    animation-delay: 0.08s;
+    box-shadow: 0 0 24px rgb(228 192 126 / 0.6);
+  }
+  .race-stripe--red {
+    top: 48.5%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #e10600 35%, transparent);
+    animation-delay: 0.16s;
+  }
+  .race-stripe--thin {
+    top: 56%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(241 239 233 / 0.5), transparent);
+    animation-delay: 0.24s;
+  }
+  @keyframes stripe-sweep {
+    to {
+      transform: translateX(-10%);
+    }
+  }
+  .gantry {
+    display: flex;
+    gap: clamp(8px, 2.2vw, 16px);
+    padding: clamp(10px, 2.4vw, 16px) clamp(12px, 3vw, 20px);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #18181b, #0b0b0d);
+    border: 1px solid rgb(228 192 126 / 0.18);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.06) inset,
+      0 30px 80px -20px rgb(0 0 0 / 0.9);
+    animation: gantry-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .gantry-col {
+    display: grid;
+    gap: clamp(6px, 1.4vw, 9px);
+    padding: clamp(6px, 1.4vw, 8px);
+    border-radius: 10px;
+    background: #050506;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.04) inset;
+  }
+  .gantry-light {
+    position: relative;
+    width: clamp(20px, 5.4vw, 38px);
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background: radial-gradient(circle at 38% 32%, #3a0d0d, #1a0606 60%, #0d0303);
+    box-shadow:
+      0 2px 4px rgb(0 0 0 / 0.8) inset,
+      0 0 0 2px #0a0a0b;
+  }
+  /* luz encendida: capa encima que solo cambia opacidad (animación en el compositor) */
+  .gantry-light.is-red::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    background: radial-gradient(circle at 38% 32%, #ffd2c8 0%, #ff3b2f 22%, #e10600 55%, #7a0300 100%);
+    box-shadow:
+      0 0 18px 4px rgb(255 40 20 / 0.75),
+      0 0 50px 10px rgb(225 6 0 / 0.35);
+    animation:
+      light-on 0.06s linear var(--on) forwards,
+      light-off 0.05s linear var(--off) forwards;
+  }
+  @keyframes light-on {
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes light-off {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes gantry-in {
+    from {
+      opacity: 0;
+      transform: translateY(-30px);
+    }
+  }
+
   /* Línea fina dorada que se desvanece en los extremos */
   .gold-rule {
     height: 1px;
@@ -113,6 +248,9 @@ canvas {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;

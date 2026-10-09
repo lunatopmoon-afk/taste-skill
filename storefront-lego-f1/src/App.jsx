@@ -1,11 +1,19 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Cube, ShoppingBag } from '@phosphor-icons/react'
+import {
+  Cube,
+  GlobeHemisphereWest,
+  LightbulbFilament,
+  Package,
+  ShieldCheck,
+  ShoppingBag,
+} from '@phosphor-icons/react'
 import { fetchCatalog, formatMoney, isShopifyConfigured } from './lib/shopify.js'
 import { DEMO_PRODUCTS } from './lib/demoProducts.js'
 import { useCart } from './lib/useCart.js'
 import { ProductModal } from './components/ProductModal.jsx'
 import { CartDrawer } from './components/CartDrawer.jsx'
+import { LightsOut, shouldShowLightsOut } from './components/LightsOut.jsx'
 
 const GalleryWall = lazy(() =>
   import('./three/GalleryWall.jsx').then((m) => ({ default: m.GalleryWall })),
@@ -14,8 +22,8 @@ const GalleryWall = lazy(() =>
 // Ajusta estos textos a las características reales de tus cuadros.
 const SPECS = [
   [
-    'Auto LEGO Technic armado',
-    'El modelo completo, armado pieza por pieza y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.',
+    'Auto de bloques armado',
+    'El modelo completo, armado pieza por pieza con bloques de construcción y fijado al fondo en vista cenital, con sus ruedas, alerones y suspensión.',
   ],
   [
     'Retroiluminación LED',
@@ -23,6 +31,14 @@ const SPECS = [
   ],
   ['Fondo del equipo', 'Póster con el color de la escudería y el nombre del auto al pie.'],
   ['Marco negro', 'Perfil delgado negro mate para que todo el protagonismo sea del auto.'],
+]
+
+// Lo que más pregunta quien compra, a la vista apenas baja del inicio
+const PERKS = [
+  [Package, 'Llega armado', 'Listo para colgar en tu pared'],
+  [LightbulbFilament, 'Luz LED incluida', 'Retroiluminación cálida'],
+  [ShieldCheck, 'Pago seguro', 'Checkout oficial de Shopify'],
+  [GlobeHemisphereWest, 'Envíos internacionales', 'Embalaje protegido'],
 ]
 
 export default function App() {
@@ -35,6 +51,11 @@ export default function App() {
   // Entrada animada del hero: el texto aparece cuando termina
   const [introDone, setIntroDone] = useState(false)
   const [skipIntro, setSkipIntro] = useState(false)
+  // Largada (semáforo) al abrir: los autos caen cuando se apagan las luces
+  const [lightsOut, setLightsOut] = useState(shouldShowLightsOut)
+  const [holdIntro, setHoldIntro] = useState(lightsOut)
+  const goLightsOut = useCallback(() => setHoldIntro(false), [])
+  const endLightsOut = useCallback(() => setLightsOut(false), [])
   const { cart, busy, error, add, setQuantity } = useCart()
 
   useEffect(() => {
@@ -100,6 +121,7 @@ export default function App() {
               onSelect={setSelected}
               onIntroDone={() => setIntroDone(true)}
               skipIntro={skipIntro}
+              hold={holdIntro}
               paused={Boolean(selected)}
             />
           </div>
@@ -126,8 +148,8 @@ export default function App() {
                 Tu F1 favorito, <span className="gold-text">colgado en tu pared.</span>
               </h1>
               <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-dim">
-                Autos LEGO Technic de Fórmula 1 montados en cuadros con luz LED. Toca un cuadro para
-                verlo en 3D, de frente y de lado.
+                Autos de Fórmula 1 de bloques de construcción, montados en cuadros con luz LED. Toca
+                un cuadro para verlo en 3D, de frente y de lado.
               </p>
             </div>
 
@@ -161,12 +183,32 @@ export default function App() {
         </motion.div>
       </section>
 
+      {/* BENEFICIOS */}
+      <section aria-label="Beneficios" className="border-y border-line bg-pit/60">
+        <ul className="mx-auto grid max-w-[1400px] grid-cols-2 gap-px md:grid-cols-4">
+          {PERKS.map(([Icon, title, text]) => (
+            <li key={title} className="flex items-center gap-3 px-5 py-5 md:px-8 md:py-6">
+              <Icon size={26} weight="light" className="shrink-0 text-signal" />
+              <div>
+                <p className="text-sm font-semibold">{title}</p>
+                <p className="text-xs text-dim">{text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       {/* COLECCIÓN */}
       <section id="coleccion" className="mx-auto max-w-[1400px] px-5 py-24 md:px-10 md:py-32">
         <div className="mb-12 flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-3xl font-semibold tracking-tighter md:text-5xl">
-            La <span className="gold-text">colección</span>
-          </h2>
+          <div>
+            <p className="font-mono text-xs uppercase tracking-widest text-signal">
+              01 · Parrilla de salida
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tighter md:text-5xl">
+              La <span className="gold-text">colección</span>
+            </h2>
+          </div>
           {!isShopifyConfigured && (
             <p className="font-mono text-xs uppercase tracking-widest text-dim">
               Catálogo de muestra · Shopify sin conectar
@@ -231,7 +273,9 @@ export default function App() {
         <div className="gold-rule absolute inset-x-0 top-0" />
         <div className="mx-auto grid max-w-[1400px] gap-12 px-5 py-24 md:grid-cols-[1fr_1.4fr] md:px-10 md:py-32">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-signal">Ficha técnica</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-signal">
+              02 · Ficha técnica
+            </p>
             <h2 className="mt-3 max-w-[14ch] text-3xl font-semibold tracking-tighter md:text-5xl">
               Hecho para verse desde el otro lado del cuarto.
             </h2>
@@ -258,16 +302,54 @@ export default function App() {
         </div>
       </section>
 
-      <div className="gold-rule" />
-      <footer className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-5 py-10 font-mono text-xs text-dim md:px-10">
-        <span>
-          © {new Date().getFullYear()} {shopName}
-        </span>
-        <span className="max-w-[70ch]">
-          LEGO®, Technic y las marcas de los equipos de F1 pertenecen a sus respectivos dueños.
-        </span>
+      <div className="checker-rule" aria-hidden />
+      <footer className="mx-auto max-w-[1400px] px-5 pb-10 pt-14 md:px-10">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <p className="font-mono text-sm font-medium uppercase tracking-[0.3em]">{shopName}</p>
+            <p className="mt-3 max-w-[40ch] text-sm leading-relaxed text-dim">
+              Cuadros de colección con autos de Fórmula 1 de bloques de construcción y luz LED.
+              Listos para colgar.
+            </p>
+          </div>
+          <nav aria-label="Pie de página" className="grid content-start gap-2 text-sm">
+            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-signal">Tienda</p>
+            <a href="#coleccion" className="text-dim transition hover:text-chalk">
+              Colección
+            </a>
+            <a href="#detalles" className="text-dim transition hover:text-chalk">
+              Ficha técnica
+            </a>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="text-left text-dim transition hover:text-chalk"
+            >
+              Carrito
+            </button>
+          </nav>
+          <div className="grid content-start gap-2 text-sm">
+            <p className="mb-1 font-mono text-xs uppercase tracking-widest text-signal">Compra</p>
+            <p className="flex items-center gap-2 text-dim">
+              <ShieldCheck size={16} className="text-signal" /> Pago seguro con Shopify
+            </p>
+            <p className="flex items-center gap-2 text-dim">
+              <GlobeHemisphereWest size={16} className="text-signal" /> Envíos internacionales
+            </p>
+          </div>
+        </div>
+        <div className="gold-rule mt-10" />
+        <div className="mt-6 flex flex-wrap justify-between gap-4 font-mono text-[11px] text-dim">
+          <span>
+            © {new Date().getFullYear()} {shopName}
+          </span>
+          <span className="max-w-[80ch]">
+            Producto independiente. Fórmula 1, F1 y los nombres y marcas de los equipos pertenecen a
+            sus respectivos dueños; no estamos afiliados ni patrocinados por ellos.
+          </span>
+        </div>
       </footer>
 
+      {lightsOut && <LightsOut onGo={goLightsOut} onDone={endLightsOut} />}
       <AnimatePresence>
         {selected && (
           <ProductModal
