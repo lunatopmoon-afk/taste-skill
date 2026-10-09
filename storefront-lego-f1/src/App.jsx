@@ -13,7 +13,6 @@ import { DEMO_PRODUCTS } from './lib/demoProducts.js'
 import { useCart } from './lib/useCart.js'
 import { ProductModal } from './components/ProductModal.jsx'
 import { CartDrawer } from './components/CartDrawer.jsx'
-import { LightsOut, shouldShowLightsOut } from './components/LightsOut.jsx'
 
 const GalleryWall = lazy(() =>
   import('./three/GalleryWall.jsx').then((m) => ({ default: m.GalleryWall })),
@@ -52,10 +51,6 @@ export default function App() {
   const [introDone, setIntroDone] = useState(false)
   const [skipIntro, setSkipIntro] = useState(false)
   // Largada (semáforo) al abrir: los autos caen cuando se apagan las luces
-  const [lightsOut, setLightsOut] = useState(shouldShowLightsOut)
-  const [holdIntro, setHoldIntro] = useState(lightsOut)
-  const goLightsOut = useCallback(() => setHoldIntro(false), [])
-  const endLightsOut = useCallback(() => setLightsOut(false), [])
   const { cart, busy, error, add, setQuantity } = useCart()
 
   useEffect(() => {
@@ -112,8 +107,12 @@ export default function App() {
 
       {/* HERO: la pared con los cuadros en 3D */}
       {/* svh: altura fija aunque la barra del navegador del celular aparezca o se esconda */}
-      <section className="relative h-[100svh] min-h-[620px] overflow-hidden">
-        <Suspense fallback={<div className="absolute inset-0 bg-asphalt" />}>
+      {/* mientras carga el 3D se ve la misma pista difuminada que hay detrás de los autos */}
+      <section
+        className="relative h-[100svh] min-h-[620px] overflow-hidden bg-asphalt bg-cover bg-center"
+        style={{ backgroundImage: 'url(/cuadros/pista.webp)' }}
+      >
+        <Suspense fallback={null}>
           <div className="absolute inset-0">
             <GalleryWall
               products={products}
@@ -121,7 +120,6 @@ export default function App() {
               onSelect={setSelected}
               onIntroDone={() => setIntroDone(true)}
               skipIntro={skipIntro}
-              hold={holdIntro}
               paused={Boolean(selected)}
             />
           </div>
@@ -349,7 +347,6 @@ export default function App() {
         </div>
       </footer>
 
-      {lightsOut && <LightsOut onGo={goLightsOut} onDone={endLightsOut} />}
       <AnimatePresence>
         {selected && (
           <ProductModal
