@@ -5,27 +5,25 @@ import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { LedFrame, FRAME_W, FRAME_H, INNER_H } from './LedFrame.jsx'
 import { IntroCars, INTRO, LOW_POWER } from './Intro.jsx'
-import { Preload, useTexture } from '@react-three/drei'
+import { useTexture } from '@react-three/drei'
 import { MODELS } from '../lib/models.js'
 
 // Precarga de todas las imágenes de la entrada y los cuadros, en cuanto carga la página
 const SMALL = typeof window !== 'undefined' && Math.min(window.innerWidth, window.innerHeight) < 700
-const TOUCH = typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0
 Object.values(MODELS).forEach((m) =>
   [
-    SMALL || TOUCH ? m.posterSmall : m.poster,
+    SMALL ? m.posterSmall : m.poster,
     m.relief,
     m.posterEmpty,
     m.shadow,
-    m.cutout,
-    SMALL || TOUCH ? null : m.cutout4k,
-    SMALL || TOUCH ? m.realCarSmall : m.realCar,
+    SMALL ? m.cutout : m.cutout4k,
+    m.realCar,
   ]
     .filter(Boolean)
     .forEach((url) => useTexture.preload(url)),
 )
 
-// Pared de la galería. Al entrar corre la secuencia de Intro.jsx: los autos reales a la vista,
+// Pared de la galería. Al entrar corre la secuencia de Intro.jsx: autos reales que caen,
 // estallan en piezas LEGO, se rearman, los cuadros llegan desde el fondo, el LEGO encaja
 // y se prenden las tres luces a la vez. Luego, pasar el cursor gira el cuadro a los lados.
 
@@ -83,11 +81,9 @@ function Timeline({ timeline, onDone }) {
       tl.t = FROZEN_T
       return
     }
-    // no arranca hasta que todo está compilado y subido a la GPU (WarmUp): así no hay
-    // tirones a mitad de la animación; mientras tanto se ven los autos quietos
-    if (!tl.ready) return
-    // tiempo real; los cuadros lentos se limitan para que no salte de golpe
-    tl.t += Math.min(rawDt, 0.05)
+    // tiempo real: aunque un cuadro tarde, la animación sigue a su velocidad (sin cámara lenta
+    // ni tirones). Solo se limitan pausas largas, como la subida inicial de texturas 4K.
+    tl.t += Math.min(rawDt, 0.1)
     if (!fired.current && tl.t >= INTRO.done) {
       fired.current = true
       onDone?.()
@@ -183,13 +179,7 @@ function cameraLayout(size, fovDeg, total, spacing) {
 
 function CameraRig({ total, spacing, timeline }) {
   const { camera, size, scene } = useThree()
-  const first = useRef(true)
   useFrame(({ pointer }, dt) => {
-    // el primer cuadro la cámara ya está en su lugar: los autos se ven quietos desde el inicio
-    if (first.current) {
-      first.current = false
-      dt = 100
-    }
     const { dist, baseY } = cameraLayout(size, camera.fov, total, spacing)
 
     // Entrada: la cámara se acerca despacio durante toda la secuencia y tiembla en el estallido
@@ -224,18 +214,6 @@ function CameraRig({ total, spacing, timeline }) {
   return null
 }
 
-// Prepara todo antes de arrancar: compila los materiales (también los de las piezas y los
-// cuadros, que aún no se ven) y sube las texturas a la GPU. Sin esto, cada cosa se prepara
-// la primera vez que aparece y la animación se traba justo en ese momento.
-function WarmUp({ timeline }) {
-  const frames = useRef(0)
-  useFrame(() => {
-    // dos cuadros después de <Preload>: ya quedó todo listo
-    if (!timeline.current.ready && ++frames.current >= 2) timeline.current.ready = true
-  })
-  return <Preload all />
-}
-
 // La pared negra aparece cuando los cuadros ya llegaron (antes, los cuadros vienen desde atrás)
 function Wall({ timeline }) {
   const wall = useWallTexture()
@@ -251,12 +229,12 @@ function Wall({ timeline }) {
   )
 }
 
-function Frames({ products, onActiveChange, onSelect, onIntroDone, onCarRects, skip }) {
+function Frames({ products, onActiveChange, onSelect, onIntroDone, skip }) {
   const size = useThree((state) => state.size)
   const fov = useThree((state) => state.camera.fov)
   const spacing = spacingFor(size.width / size.height)
   const layout = cameraLayout(size, fov, products.length, spacing)
-  const timeline = useRef({ t: REDUCED_MOTION ? INTRO.integrated : 0, ready: false })
+  const timeline = useRef({ t: REDUCED_MOTION ? INTRO.integrated : 0 })
   const [lightsOn, setLightsOn] = useState(false)
   const [interactive, setInteractive] = useState(false)
   const xs = products.map((_, i) => (i - (products.length - 1) / 2) * spacing)
@@ -275,7 +253,6 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, onCarRects, s
   return (
     <>
       <Wall timeline={timeline} />
-      {/* Los cuadros cargan aparte (fotos 4K): la entrada no los espera, llegan a los 4.6 s */}
       <Suspense fallback={null}>
         {products.map((p, i) => (
           <HangingFrame
@@ -291,10 +268,6 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, onCarRects, s
             interactive={interactive}
           />
         ))}
-        <Preload all />
-      </Suspense>
-      {/* La entrada arranca apenas están las fotos de los autos (livianas) */}
-      <Suspense fallback={null}>
         {!REDUCED_MOTION && (
           <IntroCars
             products={products}
@@ -302,10 +275,8 @@ function Frames({ products, onActiveChange, onSelect, onIntroDone, onCarRects, s
             sizes={sizes}
             layout={layout}
             timeline={timeline}
-            onCarRects={onCarRects}
           />
         )}
-        <WarmUp timeline={timeline} />
         <Timeline
           timeline={timeline}
           onDone={() => {
@@ -325,7 +296,6 @@ export function GalleryWall({
   onActiveChange,
   onSelect,
   onIntroDone,
-  onCarRects,
   skipIntro = false,
   paused = false,
 }) {
@@ -336,11 +306,7 @@ export function GalleryWall({
     typeof window !== 'undefined'
       ? Math.min(window.devicePixelRatio || 1, SMALL ? 3 : LOW_POWER ? 2 : 2.5)
       : 1
-  // Durante la entrada, en teléfono y tablet se dibuja a 1.5x (la animación va fluida);
-  // al terminar sube a la resolución completa para que los cuadros queden nítidos
-  const introDpr = LOW_POWER ? Math.min(maxDpr, 1.5) : maxDpr
-  const [dpr, setDpr] = useState(introDpr)
-  const [introOver, setIntroOver] = useState(false)
+  const [dpr, setDpr] = useState(maxDpr)
   return (
     <Canvas
       shadows={!LOW_POWER}
@@ -357,7 +323,7 @@ export function GalleryWall({
       <PerformanceMonitor
         flipflops={2}
         onDecline={() => setDpr((d) => Math.max(1.5, Math.round((d - 0.25) * 4) / 4))}
-        onIncline={() => setDpr((d) => Math.min(introOver ? maxDpr : introDpr, d + 0.25))}
+        onIncline={() => setDpr((d) => Math.min(maxDpr, d + 0.25))}
       />
       <color attach="background" args={['#060607']} />
       {/* Niebla negra: lo que está lejos se funde con la oscuridad (los cuadros "emergen") */}
@@ -381,12 +347,7 @@ export function GalleryWall({
         products={products}
         onActiveChange={onActiveChange}
         onSelect={onSelect}
-        onIntroDone={() => {
-          setIntroOver(true)
-          setDpr(maxDpr)
-          onIntroDone?.()
-        }}
-        onCarRects={onCarRects}
+        onIntroDone={onIntroDone}
         skip={skipIntro}
       />
 
